@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+  - scripts/*
+
+engineStrict: true
+
+onlyBuiltDependencies:
+  - sharp
+  - esbuild
+  - workerd

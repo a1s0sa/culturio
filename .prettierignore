@@ -1,0 +1,6 @@
+node_modules
+.svelte-kit
+dist
+coverage
+pnpm-lock.yaml
+scripts/ingestion/reports

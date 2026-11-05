@@ -1,0 +1,35 @@
+{
+  "name": "@culturio/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "pnpm build && wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "lint": "prettier --check src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@culturio/db": "workspace:*",
+    "@culturio/shared": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "svelte": "^5.57.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261018.1",
+    "@sveltejs/adapter-cloudflare": "^8.0.2",
+    "@sveltejs/kit": "^3.0.0",
+    "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "prettier": "^3.9.0",
+    "prettier-plugin-svelte": "^4.1.1",
+    "svelte-check": "^4.6.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.0",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.157.0"
+  }
+}

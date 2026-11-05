@@ -1,0 +1,25 @@
+{
+  "name": "@culturio/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./schema": "./src/schema/index.ts" },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "wrangler d1 migrations apply culturio --remote --config ../../apps/web/wrangler.jsonc",
+    "migrate:local": "wrangler d1 migrations apply culturio --local --config ../../apps/web/wrangler.jsonc",
+    "validate": "node scripts/validate-migration.mjs",
+    "check": "tsc --noEmit",
+    "lint": "prettier --check src tests",
+    "test": "vitest run"
+  },
+  "dependencies": { "drizzle-orm": "^0.45.4" },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261018.1",
+    "drizzle-kit": "^0.31.11",
+    "prettier": "^3.9.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.157.0"
+  }
+}

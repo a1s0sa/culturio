@@ -1,0 +1,30 @@
+{
+  "name": "culturio",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "dev": "pnpm --filter @culturio/web dev",
+    "build": "pnpm --recursive --if-present build",
+    "check": "pnpm --recursive --if-present check",
+    "lint": "pnpm --recursive --if-present lint",
+    "test": "pnpm --recursive --if-present test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "ingest": "pnpm --filter @culturio/ingestion ingest",
+    "ingest:report": "pnpm --filter @culturio/ingestion report",
+    "db:generate": "pnpm --filter @culturio/db generate",
+    "db:migrate": "pnpm --filter @culturio/db migrate",
+    "db:validate": "pnpm --filter @culturio/db validate",
+    "db:rebuild-search": "pnpm --filter @culturio/ingestion rebuild-search",
+    "export": "pnpm --filter @culturio/ingestion export"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.0",
+    "prettier-plugin-svelte": "^4.1.1"
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=12.0.0 <13"
+  }
+}

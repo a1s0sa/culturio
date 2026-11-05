@@ -1,0 +1,30 @@
+{
+  "name": "@culturio/ingestion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ingest": "tsx src/cli.ts ingest",
+    "report": "tsx src/cli.ts report",
+    "rebuild-search": "tsx src/cli.ts rebuild-search",
+    "export": "tsx src/cli.ts export",
+    "check": "tsc --noEmit",
+    "lint": "prettier --check src tests",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
+    "@culturio/shared": "workspace:*",
+    "p-limit": "^7.2.0",
+    "pino": "^10.4.0",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "prettier": "^3.9.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0"
+  }
+}
