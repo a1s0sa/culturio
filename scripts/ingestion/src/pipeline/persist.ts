@@ -2,31 +2,281 @@ import { createHash } from 'node:crypto';
 import type { NormalizedArtifact, SourceCheckpoint } from '@culturio/shared';
 import type { D1HttpClient, D1Statement } from '../infrastructure/d1.js';
 
-export function stableId(namespace: string, value: string): string { return `${namespace}_${createHash('sha256').update(value).digest('hex').slice(0, 24)}`; }
-export function sourceRecordHash(raw: Record<string, unknown>): string { return createHash('sha256').update(JSON.stringify(canonicalize(raw))).digest('hex'); }
-function canonicalize(value: unknown): unknown { if (Array.isArray(value)) return value.map(canonicalize); if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).sort(([a],[b]) => a.localeCompare(b)).map(([key,item]) => [key,canonicalize(item)])); return value; }
-function slugify(value: string): string { return value.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 72) || 'artifact'; }
+export function stableId(namespace: string, value: string): string {
+  return `${namespace}_${createHash('sha256').update(value).digest('hex').slice(0, 24)}`;
+}
+export function sourceRecordHash(raw: Record<string, unknown>): string {
+  return createHash('sha256')
+    .update(JSON.stringify(canonicalize(raw)))
+    .digest('hex');
+}
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => [key, canonicalize(item)])
+    );
+  return value;
+}
+function slugify(value: string): string {
+  return (
+    value
+      .normalize('NFKD')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 72) || 'artifact'
+  );
+}
 
-export interface PersistedMedia { sourceUrl: string; mimeType: string; width: number; height: number; dominantColor: string; hash: string; originalKey: string; licenseIdentifier: string | null; licenseUrl: string | null; attribution: string | null; variants: { name: string; width: number; height: number; byteSize: number; mimeType: string; objectKey: string }[]; }
+export interface PersistedMedia {
+  sourceUrl: string;
+  mimeType: string;
+  width: number;
+  height: number;
+  dominantColor: string;
+  hash: string;
+  originalKey: string;
+  licenseIdentifier: string | null;
+  licenseUrl: string | null;
+  attribution: string | null;
+  variants: {
+    name: string;
+    width: number;
+    height: number;
+    byteSize: number;
+    mimeType: string;
+    objectKey: string;
+  }[];
+}
 
-export async function persistArtifact(client: D1HttpClient, artifact: NormalizedArtifact, recordHash: string, media: PersistedMedia[], signal?: AbortSignal): Promise<{ artifactId: string; inserted: boolean }> {
-  const artifactId = stableId('art', `${artifact.source}:${artifact.externalId}`); const sourceId = stableId('src', `${artifact.source}:${artifact.externalId}`); const now = Date.now();
-  const existing = await client.query<{ id: string }>('SELECT id FROM artifact_sources WHERE institution = ? AND external_id = ?', [artifact.source, artifact.externalId], signal);
+export async function persistArtifact(
+  client: D1HttpClient,
+  artifact: NormalizedArtifact,
+  recordHash: string,
+  media: PersistedMedia[],
+  signal?: AbortSignal
+): Promise<{ artifactId: string; inserted: boolean }> {
+  const artifactId = stableId('art', `${artifact.source}:${artifact.externalId}`);
+  const sourceId = stableId('src', `${artifact.source}:${artifact.externalId}`);
+  const now = Date.now();
+  const existing = await client.query<{ id: string }>(
+    'SELECT id FROM artifact_sources WHERE institution = ? AND external_id = ?',
+    [artifact.source, artifact.externalId],
+    signal
+  );
   const statements: D1Statement[] = [
-    { sql: `INSERT INTO artifacts (id,slug,title,alternative_names,description,artifact_type,origin,historical_period,earliest_year,latest_year,date_display,date_uncertain,materials,dimensions,publication_status,quality_score,search_cultures,search_civilizations,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,alternative_names=excluded.alternative_names,description=excluded.description,artifact_type=excluded.artifact_type,origin=excluded.origin,historical_period=excluded.historical_period,earliest_year=excluded.earliest_year,latest_year=excluded.latest_year,date_display=excluded.date_display,date_uncertain=excluded.date_uncertain,materials=excluded.materials,dimensions=excluded.dimensions,publication_status=excluded.publication_status,quality_score=excluded.quality_score,search_cultures=excluded.search_cultures,search_civilizations=excluded.search_civilizations,updated_at=excluded.updated_at`, params: [artifactId, `${slugify(artifact.title)}-${artifactId.slice(-8)}`, artifact.title, JSON.stringify(artifact.alternativeNames), artifact.description, artifact.artifactType, artifact.origin, artifact.historicalPeriod, artifact.earliestYear, artifact.latestYear, artifact.dateDisplay, artifact.dateUncertain ? 1 : 0, JSON.stringify(artifact.materials), artifact.dimensions, artifact.geographyConfidence === 'confirmed' ? 'draft' : 'review', scoreArtifact(artifact), artifact.cultures.join(' '), artifact.civilizations.join(' '), now, now] },
-    { sql: `INSERT INTO artifact_sources (id,artifact_id,institution,external_id,source_url,accession_number,raw_metadata,last_fetched_at,attribution,metadata_license,record_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(institution,external_id) DO UPDATE SET source_url=excluded.source_url,accession_number=excluded.accession_number,raw_metadata=excluded.raw_metadata,last_fetched_at=excluded.last_fetched_at,attribution=excluded.attribution,metadata_license=excluded.metadata_license,record_hash=excluded.record_hash,updated_at=excluded.updated_at`, params: [sourceId, artifactId, artifact.source, artifact.externalId, artifact.sourceUrl, artifact.accessionNumber, JSON.stringify(artifact.raw), now, artifact.sourceAttribution, artifact.metadataLicense, recordHash, now, now] }
+    {
+      sql: `INSERT INTO artifacts (id,slug,title,alternative_names,description,artifact_type,origin,historical_period,earliest_year,latest_year,date_display,date_uncertain,materials,dimensions,publication_status,quality_score,search_cultures,search_civilizations,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,alternative_names=excluded.alternative_names,description=excluded.description,artifact_type=excluded.artifact_type,origin=excluded.origin,historical_period=excluded.historical_period,earliest_year=excluded.earliest_year,latest_year=excluded.latest_year,date_display=excluded.date_display,date_uncertain=excluded.date_uncertain,materials=excluded.materials,dimensions=excluded.dimensions,publication_status=excluded.publication_status,quality_score=excluded.quality_score,search_cultures=excluded.search_cultures,search_civilizations=excluded.search_civilizations,updated_at=excluded.updated_at`,
+      params: [
+        artifactId,
+        `${slugify(artifact.title)}-${artifactId.slice(-8)}`,
+        artifact.title,
+        JSON.stringify(artifact.alternativeNames),
+        artifact.description,
+        artifact.artifactType,
+        artifact.origin,
+        artifact.historicalPeriod,
+        artifact.earliestYear,
+        artifact.latestYear,
+        artifact.dateDisplay,
+        artifact.dateUncertain ? 1 : 0,
+        JSON.stringify(artifact.materials),
+        artifact.dimensions,
+        artifact.geographyConfidence === 'confirmed' ? 'draft' : 'review',
+        scoreArtifact(artifact),
+        artifact.cultures.join(' '),
+        artifact.civilizations.join(' '),
+        now,
+        now
+      ]
+    },
+    {
+      sql: `INSERT INTO artifact_sources (id,artifact_id,institution,external_id,source_url,accession_number,raw_metadata,last_fetched_at,attribution,metadata_license,record_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(institution,external_id) DO UPDATE SET source_url=excluded.source_url,accession_number=excluded.accession_number,raw_metadata=excluded.raw_metadata,last_fetched_at=excluded.last_fetched_at,attribution=excluded.attribution,metadata_license=excluded.metadata_license,record_hash=excluded.record_hash,updated_at=excluded.updated_at`,
+      params: [
+        sourceId,
+        artifactId,
+        artifact.source,
+        artifact.externalId,
+        artifact.sourceUrl,
+        artifact.accessionNumber,
+        JSON.stringify(artifact.raw),
+        now,
+        artifact.sourceAttribution,
+        artifact.metadataLicense,
+        recordHash,
+        now,
+        now
+      ]
+    }
   ];
-  for (const name of artifact.cultures) { const id = stableId('cul', name.toLowerCase()); statements.push({ sql: 'INSERT INTO cultures (id,name,created_at,updated_at) VALUES (?,?,?,?) ON CONFLICT(name) DO NOTHING', params: [id,name,now,now] }, { sql: 'INSERT INTO artifact_cultures (artifact_id,culture_id) VALUES (?,?) ON CONFLICT DO NOTHING', params: [artifactId,id] }); }
-  for (const name of artifact.civilizations) { const id = stableId('civ', name.toLowerCase()); statements.push({ sql: 'INSERT INTO civilizations (id,name,created_at,updated_at) VALUES (?,?,?,?) ON CONFLICT(name) DO NOTHING', params: [id,name,now,now] }, { sql: 'INSERT INTO artifact_civilizations (artifact_id,civilization_id) VALUES (?,?) ON CONFLICT DO NOTHING', params: [artifactId,id] }); }
-  for (const item of media) { const imageId = stableId('img', `${sourceId}:${item.sourceUrl}`); statements.push({ sql: `INSERT INTO artifact_images (id,artifact_id,source_id,original_url,width,height,mime_type,dominant_color,content_hash,original_object_key,license_identifier,license_url,attribution,redistribution_allowed,publication_status,processed_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(source_id,original_url) DO UPDATE SET width=excluded.width,height=excluded.height,mime_type=excluded.mime_type,dominant_color=excluded.dominant_color,content_hash=excluded.content_hash,original_object_key=excluded.original_object_key,processed_at=excluded.processed_at,updated_at=excluded.updated_at`, params: [imageId,artifactId,sourceId,item.sourceUrl,item.width,item.height,item.mimeType,item.dominantColor,item.hash,item.originalKey,item.licenseIdentifier,item.licenseUrl,item.attribution,1,'draft',now,now,now] }); for (const variant of item.variants) statements.push({ sql: `INSERT INTO image_variants (id,image_id,name,width,height,byte_size,mime_type,object_key,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(image_id,name) DO UPDATE SET width=excluded.width,height=excluded.height,byte_size=excluded.byte_size,object_key=excluded.object_key,updated_at=excluded.updated_at`, params: [stableId('var', `${imageId}:${variant.name}`),imageId,variant.name,variant.width,variant.height,variant.byteSize,variant.mimeType,variant.objectKey,now,now] }); }
+  for (const name of artifact.cultures) {
+    const id = stableId('cul', name.toLowerCase());
+    statements.push(
+      {
+        sql: 'INSERT INTO cultures (id,name,created_at,updated_at) VALUES (?,?,?,?) ON CONFLICT(name) DO NOTHING',
+        params: [id, name, now, now]
+      },
+      {
+        sql: 'INSERT INTO artifact_cultures (artifact_id,culture_id) VALUES (?,?) ON CONFLICT DO NOTHING',
+        params: [artifactId, id]
+      }
+    );
+  }
+  for (const name of artifact.civilizations) {
+    const id = stableId('civ', name.toLowerCase());
+    statements.push(
+      {
+        sql: 'INSERT INTO civilizations (id,name,created_at,updated_at) VALUES (?,?,?,?) ON CONFLICT(name) DO NOTHING',
+        params: [id, name, now, now]
+      },
+      {
+        sql: 'INSERT INTO artifact_civilizations (artifact_id,civilization_id) VALUES (?,?) ON CONFLICT DO NOTHING',
+        params: [artifactId, id]
+      }
+    );
+  }
+  for (const item of media) {
+    const imageId = stableId('img', `${sourceId}:${item.sourceUrl}`);
+    statements.push({
+      sql: `INSERT INTO artifact_images (id,artifact_id,source_id,original_url,width,height,mime_type,dominant_color,content_hash,original_object_key,license_identifier,license_url,attribution,redistribution_allowed,publication_status,processed_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(source_id,original_url) DO UPDATE SET width=excluded.width,height=excluded.height,mime_type=excluded.mime_type,dominant_color=excluded.dominant_color,content_hash=excluded.content_hash,original_object_key=excluded.original_object_key,processed_at=excluded.processed_at,updated_at=excluded.updated_at`,
+      params: [
+        imageId,
+        artifactId,
+        sourceId,
+        item.sourceUrl,
+        item.width,
+        item.height,
+        item.mimeType,
+        item.dominantColor,
+        item.hash,
+        item.originalKey,
+        item.licenseIdentifier,
+        item.licenseUrl,
+        item.attribution,
+        1,
+        'draft',
+        now,
+        now,
+        now
+      ]
+    });
+    for (const variant of item.variants)
+      statements.push({
+        sql: `INSERT INTO image_variants (id,image_id,name,width,height,byte_size,mime_type,object_key,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(image_id,name) DO UPDATE SET width=excluded.width,height=excluded.height,byte_size=excluded.byte_size,object_key=excluded.object_key,updated_at=excluded.updated_at`,
+        params: [
+          stableId('var', `${imageId}:${variant.name}`),
+          imageId,
+          variant.name,
+          variant.width,
+          variant.height,
+          variant.byteSize,
+          variant.mimeType,
+          variant.objectKey,
+          now,
+          now
+        ]
+      });
+  }
   const hostedUrls = new Set(media.map((item) => item.sourceUrl));
-  for (const item of artifact.images.filter((image) => !hostedUrls.has(image.sourceUrl))) statements.push({ sql: `INSERT INTO artifact_images (id,artifact_id,source_id,original_url,width,height,mime_type,license_identifier,license_url,attribution,redistribution_allowed,publication_status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(source_id,original_url) DO UPDATE SET license_identifier=excluded.license_identifier,license_url=excluded.license_url,attribution=excluded.attribution,redistribution_allowed=excluded.redistribution_allowed,publication_status=excluded.publication_status,updated_at=excluded.updated_at`, params: [stableId('img',`${sourceId}:${item.sourceUrl}`),artifactId,sourceId,item.sourceUrl,item.width,item.height,item.mimeType,item.license.identifier,item.license.url,item.license.attribution,item.license.redistributionAllowed ? 1 : 0,item.license.redistributionAllowed ? 'review' : 'restricted',now,now] });
-  for (let offset = 0; offset < statements.length; offset += 100) await client.batch(statements.slice(offset, offset + 100), signal);
+  for (const item of artifact.images.filter((image) => !hostedUrls.has(image.sourceUrl)))
+    statements.push({
+      sql: `INSERT INTO artifact_images (id,artifact_id,source_id,original_url,width,height,mime_type,license_identifier,license_url,attribution,redistribution_allowed,publication_status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(source_id,original_url) DO UPDATE SET license_identifier=excluded.license_identifier,license_url=excluded.license_url,attribution=excluded.attribution,redistribution_allowed=excluded.redistribution_allowed,publication_status=excluded.publication_status,updated_at=excluded.updated_at`,
+      params: [
+        stableId('img', `${sourceId}:${item.sourceUrl}`),
+        artifactId,
+        sourceId,
+        item.sourceUrl,
+        item.width,
+        item.height,
+        item.mimeType,
+        item.license.identifier,
+        item.license.url,
+        item.license.attribution,
+        item.license.redistributionAllowed ? 1 : 0,
+        item.license.redistributionAllowed ? 'review' : 'restricted',
+        now,
+        now
+      ]
+    });
+  for (let offset = 0; offset < statements.length; offset += 100)
+    await client.batch(statements.slice(offset, offset + 100), signal);
   return { artifactId, inserted: existing.length === 0 };
 }
 
-export async function saveCheckpoint(client: D1HttpClient, runId: string, source: string, checkpoint: SourceCheckpoint, externalId: string, signal?: AbortSignal): Promise<void> {
-  const now = Date.now(); await client.batch([{ sql: `INSERT INTO ingestion_checkpoints (id,run_id,source,cursor,state,processed_external_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(run_id,source) DO UPDATE SET cursor=excluded.cursor,state=excluded.state,processed_external_id=excluded.processed_external_id,updated_at=excluded.updated_at`, params: [stableId('chk',`${runId}:${source}`),runId,source,checkpoint.cursor ?? null,JSON.stringify(checkpoint),externalId,now,now] }], signal);
+export async function saveCheckpoint(
+  client: D1HttpClient,
+  runId: string,
+  source: string,
+  checkpoint: SourceCheckpoint,
+  externalId: string,
+  signal?: AbortSignal
+): Promise<void> {
+  const now = Date.now();
+  await client.batch(
+    [
+      {
+        sql: `INSERT INTO ingestion_checkpoints (id,run_id,source,cursor,state,processed_external_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(run_id,source) DO UPDATE SET cursor=excluded.cursor,state=excluded.state,processed_external_id=excluded.processed_external_id,updated_at=excluded.updated_at`,
+        params: [
+          stableId('chk', `${runId}:${source}`),
+          runId,
+          source,
+          checkpoint.cursor ?? null,
+          JSON.stringify(checkpoint),
+          externalId,
+          now,
+          now
+        ]
+      }
+    ],
+    signal
+  );
 }
-export async function createReview(client: D1HttpClient, runId: string, source: string, externalId: string, code: string, reason: string, payload: unknown, signal?: AbortSignal): Promise<void> { const now=Date.now(); await client.batch([{ sql: 'INSERT INTO review_records (id,run_id,source,external_id,reason_code,reason,payload,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)', params: [stableId('rev',`${runId}:${source}:${externalId}:${code}`),runId,source,externalId,code,reason,JSON.stringify(payload),'open',now,now] }], signal); }
-function scoreArtifact(value: NormalizedArtifact): number { return Math.min(1, [value.title,value.description,value.artifactType,value.origin,value.dateDisplay,value.materials.length ? 'yes' : null,value.images.length ? 'yes' : null].filter(Boolean).length / 7); }
+export async function createReview(
+  client: D1HttpClient,
+  runId: string,
+  source: string,
+  externalId: string,
+  code: string,
+  reason: string,
+  payload: unknown,
+  signal?: AbortSignal
+): Promise<void> {
+  const now = Date.now();
+  await client.batch(
+    [
+      {
+        sql: 'INSERT INTO review_records (id,run_id,source,external_id,reason_code,reason,payload,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        params: [
+          stableId('rev', `${runId}:${source}:${externalId}:${code}`),
+          runId,
+          source,
+          externalId,
+          code,
+          reason,
+          JSON.stringify(payload),
+          'open',
+          now,
+          now
+        ]
+      }
+    ],
+    signal
+  );
+}
+function scoreArtifact(value: NormalizedArtifact): number {
+  return Math.min(
+    1,
+    [
+      value.title,
+      value.description,
+      value.artifactType,
+      value.origin,
+      value.dateDisplay,
+      value.materials.length ? 'yes' : null,
+      value.images.length ? 'yes' : null
+    ].filter(Boolean).length / 7
+  );
+}

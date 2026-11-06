@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "pnpm --filter @culturio/web dev",
     "build": "pnpm --recursive --if-present build",
-    "check": "pnpm --recursive --if-present check",
+    "check": "pnpm --recursive --workspace-concurrency=1 --if-present check",
     "lint": "pnpm --recursive --if-present lint",
     "test": "pnpm --recursive --if-present test",
+    "test:e2e": "pnpm --filter @culturio/web test:e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "ingest": "pnpm --filter @culturio/ingestion ingest",

@@ -1,17 +1,42 @@
 export class HttpError extends Error {
-  constructor(message: string, readonly status: number, readonly retryAfterMs?: number) { super(message); }
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly retryAfterMs?: number
+  ) {
+    super(message);
+  }
 }
-export async function withRetry<T>(operation: () => Promise<T>, attempts = 4, signal?: AbortSignal): Promise<T> {
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  attempts = 4,
+  signal?: AbortSignal
+): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     signal?.throwIfAborted();
-    try { return await operation(); } catch (error) {
+    try {
+      return await operation();
+    } catch (error) {
       lastError = error;
-      const retryable = error instanceof HttpError ? error.status === 429 || error.status >= 500 : error instanceof TypeError;
+      const retryable =
+        error instanceof HttpError
+          ? error.status === 429 || error.status >= 500
+          : error instanceof TypeError;
       if (!retryable || attempt === attempts - 1) throw error;
       const retryAfter = error instanceof HttpError ? error.retryAfterMs : undefined;
       const delay = retryAfter ?? Math.min(500 * 2 ** attempt + Math.random() * 250, 10_000);
-      await new Promise<void>((resolve, reject) => { const timer = setTimeout(resolve, delay); signal?.addEventListener('abort', () => { clearTimeout(timer); reject(signal.reason); }, { once: true }); });
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, delay);
+        signal?.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer);
+            reject(signal.reason);
+          },
+          { once: true }
+        );
+      });
     }
   }
   throw lastError;

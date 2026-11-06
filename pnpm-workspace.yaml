@@ -5,7 +5,7 @@ packages:
 
 engineStrict: true
 
-onlyBuiltDependencies:
-  - sharp
-  - esbuild
-  - workerd
+allowBuilds:
+  sharp: true
+  esbuild: true
+  workerd: true

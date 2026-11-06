@@ -1,6 +1,6 @@
 # Culturio
 
-Culturio is an open-source foundation for preserving and discovering historical African artifacts. This phase contains a minimal SvelteKit application and an independent ingestion system; the gallery and virtual museum are intentionally not implemented yet.
+Culturio is an open-source platform for preserving and discovering historical African artifacts. It includes a performant SvelteKit digital gallery and an independent ingestion system. The 3D virtual museum remains a future phase.
 
 ## Workspace
 
@@ -18,6 +18,7 @@ pnpm install
 pnpm dev
 pnpm check
 pnpm test
+pnpm test:e2e
 ```
 
 Provision D1 and R2 before publishing data. Add `DB` and `MEDIA` bindings to `apps/web/wrangler.jsonc`, apply `packages/db/migrations`, and use least-privilege API tokens. See [operations](docs/operations.md).
@@ -28,5 +29,7 @@ pnpm ingest --source smithsonian --limit 100
 pnpm db:rebuild-search
 pnpm export
 ```
+
+The gallery lives at `/gallery`, with canonical artifact pages at `/artifacts/[slug]`. It renders an intentional empty state until reviewed records and redistributable images are marked `published` in D1. See [gallery architecture](docs/gallery-architecture.md) and the unclaimed [performance baseline](docs/performance.md).
 
 The software is MIT licensed. Imported metadata and media retain their source-specific rights; the software license does not grant rights to cultural heritage content.

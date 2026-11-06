@@ -1,4 +1,8 @@
-export interface HistoricalDateRange { earliest: number | null; latest: number | null; uncertain: boolean; }
+export interface HistoricalDateRange {
+  earliest: number | null;
+  latest: number | null;
+  uncertain: boolean;
+}
 
 export function parseHistoricalDate(value: string | null | undefined): HistoricalDateRange {
   if (!value?.trim()) return { earliest: null, latest: null, uncertain: true };
@@ -13,6 +17,6 @@ export function parseHistoricalDate(value: string | null | undefined): Historica
       : { earliest: end - 99, latest: end, uncertain: true };
   }
   if (!years.length) return { earliest: null, latest: null, uncertain: true };
-  const signed = years.map((year) => isBce ? -year : year).sort((a, b) => a - b);
+  const signed = years.map((year) => (isBce ? -year : year)).sort((a, b) => a - b);
   return { earliest: signed[0] ?? null, latest: signed.at(-1) ?? null, uncertain };
 }

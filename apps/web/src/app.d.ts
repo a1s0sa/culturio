@@ -6,9 +6,16 @@ declare global {
       env: {
         DB: D1Database;
         MEDIA: R2Bucket;
+        ASSET_BASE_URL?: string;
       };
       context: ExecutionContext;
       caches: CacheStorage;
+    }
+  }
+  namespace App {
+    interface PageState {
+      modalSlug?: string;
+      returnFocusId?: string;
     }
   }
 }

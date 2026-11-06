@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./schema": "./src/schema/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
   "scripts": {
     "generate": "drizzle-kit generate",
     "migrate": "wrangler d1 migrations apply culturio --remote --config ../../apps/web/wrangler.jsonc",
@@ -13,9 +16,13 @@
     "lint": "prettier --check src tests",
     "test": "vitest run"
   },
-  "dependencies": { "drizzle-orm": "^0.45.4" },
+  "dependencies": {
+    "@culturio/shared": "workspace:*",
+    "drizzle-orm": "^0.45.4"
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261018.1",
+    "@types/node": "^26.6.6",
     "drizzle-kit": "^0.31.11",
     "prettier": "^3.9.0",
     "typescript": "^6.0.3",

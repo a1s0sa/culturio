@@ -11,22 +11,31 @@
     "cf-typegen": "wrangler types",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "prettier --check src",
-    "test": "vitest run"
+    "test": "vitest run --config vitest.config.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.2.8",
+    "@fontsource/dm-sans": "^5.2.8",
     "@culturio/db": "workspace:*",
     "@culturio/shared": "workspace:*",
+    "@threlte/core": "^8.6.1",
     "drizzle-orm": "^0.45.4",
-    "svelte": "^5.57.2"
+    "svelte": "^5.57.2",
+    "three": "^0.187.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@cloudflare/workers-types": "^5.20261018.1",
     "@sveltejs/adapter-cloudflare": "^8.0.2",
     "@sveltejs/kit": "^3.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "@tailwindcss/vite": "^4.3.3",
     "prettier": "^3.9.0",
     "prettier-plugin-svelte": "^4.1.1",
     "svelte-check": "^4.6.0",
+    "tailwindcss": "^4.3.3",
+    "@types/three": "^0.187.0",
     "typescript": "^6.0.3",
     "vite": "^8.3.0",
     "vitest": "^5.1.0",

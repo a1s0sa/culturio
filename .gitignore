@@ -3,10 +3,13 @@ node_modules/
 
 # Build output
 **/.next/
+**/.svelte-kit/
 **/out/
 **/build/
 **/dist/
 coverage/
+**/test-results/
+**/playwright-report/
 scripts/ingestion/reports/
 
 # Environment files
