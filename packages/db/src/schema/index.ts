@@ -212,6 +212,43 @@ export const ingestionCheckpoints = sqliteTable(
   },
   (table) => [uniqueIndex('ingestion_checkpoints_run_source_uq').on(table.runId, table.source)]
 );
+export const ingestionJobs = sqliteTable(
+  'ingestion_jobs',
+  {
+    id: text('id').primaryKey(),
+    runId: text('run_id')
+      .notNull()
+      .references(() => ingestionRuns.id, { onDelete: 'cascade' }),
+    source: text('source').notNull(),
+    externalId: text('external_id').notNull(),
+    status: text('status', {
+      enum: ['queued', 'processing', 'completed', 'skipped', 'failed', 'review']
+    })
+      .notNull()
+      .default('queued'),
+    result: text('result', { enum: ['inserted', 'updated', 'skipped'] }),
+    failureReason: text('failure_reason'),
+    attempts: integer('attempts').notNull().default(0),
+    completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
+    ...timestamps
+  },
+  (table) => [
+    uniqueIndex('ingestion_jobs_run_source_external_uq').on(
+      table.runId,
+      table.source,
+      table.externalId
+    ),
+    index('ingestion_jobs_status_idx').on(table.status)
+  ]
+);
+export const ingestionDiscoveryState = sqliteTable('ingestion_discovery_state', {
+  source: text('source').primaryKey(),
+  offset: integer('offset').notNull().default(0),
+  nextRequestAt: integer('next_request_at').notNull().default(0),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`)
+});
 export const reviewRecords = sqliteTable(
   'review_records',
   {

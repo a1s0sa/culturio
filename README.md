@@ -7,7 +7,7 @@ Culturio is an open-source platform for preserving and discovering historical Af
 - `apps/web` — SvelteKit application targeting Cloudflare Workers.
 - `packages/db` — normalized Drizzle/D1 schema, migration, and FTS5 queries.
 - `packages/shared` — validated contracts, historical dates, and geographic rules.
-- `scripts/ingestion` — Node.js museum adapters, Sharp media pipeline, D1/R2 clients, and CLI.
+- `scripts/ingestion` — shared Met and Smithsonian adapters plus the legacy local CLI. Production discovery and ingestion run through the SvelteKit Worker, Queues, Workflows, D1, R2, and Cloudflare Images; see [docs/ingestion.md](docs/ingestion.md).
 
 ## Local setup
 

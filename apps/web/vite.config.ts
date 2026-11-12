@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     sveltekit({
-      adapter: adapter({ config: './wrangler.jsonc' }),
+      adapter: adapter({ config: './wrangler.adapter.jsonc' }),
       compilerOptions: {
         runes: ({ filename }) =>
           filename.split(/[/\\]/).includes('node_modules') ? undefined : true

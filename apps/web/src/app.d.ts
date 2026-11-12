@@ -5,6 +5,12 @@ declare global {
     interface Env {
       DB: D1Database;
       MEDIA: R2Bucket;
+      IMAGES: ImagesBinding;
+      INGEST_QUEUE: Queue<unknown>;
+      INGEST_DLQ: Queue<unknown>;
+      INGEST_WORKFLOW: Workflow<unknown>;
+      INGESTION_TRIGGER_SECRET?: string;
+      SMITHSONIAN_API_KEY?: string;
       ASSET_BASE_URL?: string;
       BETTER_AUTH_SECRET: string;
       BETTER_AUTH_URL: string;

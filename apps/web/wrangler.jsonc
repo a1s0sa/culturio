@@ -1,25 +1,41 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "culturio",
-  "main": ".svelte-kit/cloudflare/_worker.js",
+  "main": "worker/entry.ts",
   "compatibility_date": "2026-11-05",
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
   "queues": {
     "producers": [
       {
-        "binding": "MY_QUEUE",
-        "queue": "test"
+        "binding": "INGEST_QUEUE",
+        "queue": "culturio-ingest"
+      },
+      {
+        "binding": "INGEST_DLQ",
+        "queue": "culturio-ingest-dlq"
       }
     ],
     "consumers": [
       {
-        "queue": "test",
+        "queue": "culturio-ingest",
         "max_batch_size": 10,
-        "dead_letter_queue": "my-queue-dlq"
+        "max_batch_timeout": 5,
+        "max_retries": 5,
+        "retry_delay": 30,
+        "max_concurrency": 2,
+        "dead_letter_queue": "culturio-ingest-dlq"
       }
     ]
   },
+  "workflows": [
+    {
+      "name": "culturio-ingestion",
+      "binding": "INGEST_WORKFLOW",
+      "class_name": "IngestionWorkflow",
+      "concurrency": { "limit": 5 }
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
@@ -28,6 +44,7 @@
       "migrations_dir": "../../packages/db/migrations"
     }
   ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "culturio-media" }],
+  "images": { "binding": "IMAGES" },
   "observability": { "enabled": true }
-  // Configure the MEDIA binding here after creating the R2 bucket. See docs/operations.md.
 }

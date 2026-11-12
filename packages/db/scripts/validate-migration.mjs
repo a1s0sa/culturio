@@ -2,7 +2,9 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 const database = new DatabaseSync(':memory:');
-database.exec(readFileSync(new URL('../migrations/0000_foundation.sql', import.meta.url), 'utf8'));
+for (const migration of ['0000_foundation.sql', '0001_auth.sql', '0002_ingestion_jobs.sql']) {
+  database.exec(readFileSync(new URL(`../migrations/${migration}`, import.meta.url), 'utf8'));
+}
 const now = Date.now();
 database
   .prepare(
