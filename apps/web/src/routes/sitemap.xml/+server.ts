@@ -1,14 +1,15 @@
+import { env } from 'cloudflare:workers';
 import type { RequestHandler } from './$types';
 const escape = (value: string) =>
   value.replace(
     /[&<>"']/g,
     (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[char]!
   );
-export const GET: RequestHandler = async ({ platform, setHeaders }) => {
+export const GET: RequestHandler = async ({ setHeaders }) => {
   const staticPaths = ['', 'gallery', 'about', 'museum'];
-  const rows = platform?.env.DB
+  const rows = env.DB
     ? (
-        await platform.env.DB.prepare(
+        await env.DB.prepare(
           "SELECT slug,updated_at FROM artifacts WHERE publication_status='published' ORDER BY slug"
         ).all<{ slug: string; updated_at: number }>()
       ).results

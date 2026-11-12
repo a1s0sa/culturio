@@ -1,4 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
+export * from './auth.js';
 import {
   check,
   index,

@@ -1,8 +1,9 @@
+import { env } from 'cloudflare:workers';
 import { parseGallerySearchParams } from '@culturio/shared';
 import { filtersFor, listArtifacts } from '$lib/server/artifacts';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ url, platform, setHeaders }) => {
+export const load: PageServerLoad = async ({ url, setHeaders }) => {
   const query = parseGallerySearchParams(url.searchParams);
   delete query.cursor;
   setHeaders({
@@ -11,6 +12,6 @@ export const load: PageServerLoad = async ({ url, platform, setHeaders }) => {
       : 'public, max-age=60, s-maxage=300',
     'cache-tag': 'artifacts'
   });
-  const [page, filters] = await Promise.all([listArtifacts(platform, query), filtersFor(platform)]);
+  const [page, filters] = await Promise.all([listArtifacts(env, query), filtersFor(env)]);
   return { page, filters, query };
 };

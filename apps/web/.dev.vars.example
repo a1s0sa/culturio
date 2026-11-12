@@ -1,0 +1,6 @@
+BETTER_AUTH_SECRET=replace-with-a-random-secret-of-at-least-32-characters
+BETTER_AUTH_URL=http://localhost:5173
+ZEPTO_MAIL_API_KEY=replace-with-your-zeptomail-agent-api-key
+ZEPTO_MAIL_API_URL=https://cpaas.zoho.com/v1.1/email
+ZEPTO_MAIL_FROM_EMAIL=login@example.com
+ZEPTO_MAIL_FROM_NAME=Culturio

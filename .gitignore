@@ -17,6 +17,7 @@ scripts/ingestion/reports/
 .env.*
 !.env.example
 !.env.test
+.dev.vars
 
 # Logs and caches
 *.log

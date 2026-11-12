@@ -1,10 +1,33 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "culturio-web",
+  "name": "culturio",
   "main": ".svelte-kit/cloudflare/_worker.js",
   "compatibility_date": "2026-11-05",
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
+  "queues": {
+    "producers": [
+      {
+        "binding": "MY_QUEUE",
+        "queue": "test"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "test",
+        "max_batch_size": 10,
+        "dead_letter_queue": "my-queue-dlq"
+      }
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "culturio-db",
+      "database_id": "e8467dcc-d503-4404-b7f0-547e2ac08e1a",
+      "migrations_dir": "../../packages/db/migrations"
+    }
+  ],
   "observability": { "enabled": true }
-  // Add DB and MEDIA bindings after provisioning resources. See docs/operations.md.
+  // Configure the MEDIA binding here after creating the R2 bucket. See docs/operations.md.
 }
