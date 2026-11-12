@@ -2,9 +2,9 @@
   import '../app.css';
   import Header from '$lib/components/layout/Header.svelte';
   import MobileNavigation from '$lib/components/layout/MobileNavigation.svelte';
-  let { children } = $props();
+  let { children, data } = $props();
 </script>
 
-<Header />
+<Header user={data.user} />
 {@render children()}
 <MobileNavigation />
