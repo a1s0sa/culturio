@@ -44,7 +44,7 @@
       "migrations_dir": "../../packages/db/migrations"
     }
   ],
-  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "culturio-media" }],
-  "images": { "binding": "IMAGES" },
+  // "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "culturio-media" }],
+  // "images": { "binding": "IMAGES" },
   "observability": { "enabled": true }
 }
