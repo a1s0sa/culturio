@@ -1,5 +1,5 @@
 <nav aria-label="Mobile navigation">
-  <a href="/gallery"><span aria-hidden="true">⌂</span>Explore</a><a href="/gallery?focus=search"
+  <a href="/gallery"><span aria-hidden="true">⌂</span>Explore</a><a href="/search"
     ><span aria-hidden="true">⌕</span>Search</a
   ><a href="/museum"><span aria-hidden="true">◇</span>Museum</a>
 </nav>

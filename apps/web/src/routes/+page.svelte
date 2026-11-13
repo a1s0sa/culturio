@@ -1,6 +1,31 @@
 <script lang="ts">
   import MasonryGrid from '$lib/components/gallery/MasonryGrid.svelte';
+  import { revealOnScroll } from '$lib/actions/reveal-on-scroll';
+  import { serializeJsonLd } from '$lib/seo/json-ld';
   let { data } = $props();
+  let jsonLd = $derived(
+    serializeJsonLd({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Organization',
+          '@id': 'https://culturio.africa/#organization',
+          name: 'Culturio',
+          url: 'https://culturio.africa/',
+          description:
+            'An open archive for discovering African cultural heritage through its artifacts.'
+        },
+        {
+          '@type': 'WebSite',
+          '@id': 'https://culturio.africa/#website',
+          name: 'Culturio',
+          url: 'https://culturio.africa/',
+          publisher: { '@id': 'https://culturio.africa/#organization' },
+          inLanguage: 'en'
+        }
+      ]
+    })
+  );
 </script>
 
 <svelte:head
@@ -13,7 +38,7 @@
   /><meta
     property="og:description"
     content="An image-first digital archive of African cultural heritage."
-  /></svelte:head
+  />{@html `<script type="application/ld+json">${jsonLd}<\/script>`}</svelte:head
 >
 <main>
   <section class="hero page-shell">
@@ -41,7 +66,9 @@
         </div>
       </div>
       <div class="feature-grid">
-        {#each data.featured as artifact, index}<a href={`/artifacts/${artifact.slug}`}
+        {#each data.featured as artifact, index (artifact.id)}<a
+            use:revealOnScroll={index % 4}
+            href={`/artifacts/${artifact.slug}`}
             ><div
               class="feature-image"
               style:background={artifact.image?.dominantColor ?? '#d8cabb'}

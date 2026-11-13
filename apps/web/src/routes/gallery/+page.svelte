@@ -1,19 +1,39 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import type { ArtifactCardView } from '@culturio/db';
   import MasonryGrid from '$lib/components/gallery/MasonryGrid.svelte';
   import GalleryFilters from '$lib/components/gallery/GalleryFilters.svelte';
   import LoadMore from '$lib/components/gallery/LoadMore.svelte';
   import ArtifactModal from '$lib/components/artifacts/ArtifactModal.svelte';
+  import { serializeJsonLd } from '$lib/seo/json-ld';
   let { data } = $props();
-  let items = $state<ArtifactCardView[]>([]);
-  let nextCursor = $state<string | null>(null);
+  let items = $state<ArtifactCardView[]>(untrack(() => data.page.items));
+  let nextCursor = $state<string | null>(untrack(() => data.page.nextCursor));
   let loading = $state(false);
   let message = $state('');
   let sentinel: HTMLElement;
   let request = 0;
+  let jsonLd = $derived(
+    serializeJsonLd({
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: 'Explore African artifacts — Culturio',
+      description: 'Discover artifacts by culture, origin, period, material, and type.',
+      url: 'https://culturio.africa/gallery',
+      isPartOf: { '@type': 'WebSite', name: 'Culturio', url: 'https://culturio.africa/' },
+      mainEntity: {
+        '@type': 'ItemList',
+        itemListElement: data.page.items.map((artifact, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: artifact.title,
+          url: `https://culturio.africa/artifacts/${artifact.slug}`
+        }))
+      }
+    })
+  );
   $effect(() => {
     data.page;
     request += 1;
@@ -67,8 +87,6 @@
       { rootMargin: '700px 0px' }
     );
     observer.observe(sentinel);
-    if (page.url.searchParams.get('focus') === 'search')
-      document.getElementById('gallery-search')?.focus();
     return () => {
       observer.disconnect();
       request += 1;
@@ -80,7 +98,10 @@
   ><title>Explore African artifacts — Culturio</title><meta
     name="description"
     content="Discover African historical artifacts by culture, origin, period, material, and type."
-  /><link rel="canonical" href={`https://culturio.africa/gallery${page.url.search}`} /></svelte:head
+  /><meta name="robots" content={page.url.search ? 'noindex,follow' : 'index,follow'} /><link
+    rel="canonical"
+    href="https://culturio.africa/gallery"
+  />{@html `<script type="application/ld+json">${jsonLd}<\/script>`}</svelte:head
 >
 <main class="page-shell">
   <header class="intro">

@@ -13,7 +13,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "prettier --check src",
     "test": "vitest run --config vitest.config.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "ingest:local": "pnpm build && pnpm exec wrangler d1 migrations apply DB --local --config wrangler.jsonc && node scripts/trigger-local-ingestion.mjs"
   },
   "dependencies": {
     "@culturio/db": "workspace:*",

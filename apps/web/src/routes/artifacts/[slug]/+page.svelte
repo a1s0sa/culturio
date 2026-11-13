@@ -1,20 +1,45 @@
 <script lang="ts">
   import ArtifactDetails from '$lib/components/artifacts/ArtifactDetails.svelte';
+  import { serializeJsonLd } from '$lib/seo/json-ld';
   let { data } = $props();
   let a = $derived(data.artifact);
   let json = $derived(
-    JSON.stringify({
+    serializeJsonLd({
       '@context': 'https://schema.org',
-      '@type': 'VisualArtwork',
-      name: a.title,
-      description: a.description ?? undefined,
-      artform: a.artifactType ?? undefined,
-      artMedium: a.materials.join(', ') || undefined,
-      temporal: a.dateDisplay ?? undefined,
-      contentLocation: a.origin ? { '@type': 'Place', name: a.origin } : undefined,
-      image: a.images.map((image) => image.src),
-      url: `https://culturio.africa/artifacts/${a.slug}`
-    }).replaceAll('<', '\\u003c')
+      '@graph': [
+        {
+          '@type': 'VisualArtwork',
+          name: a.title,
+          description: a.description ?? undefined,
+          artform: a.artifactType ?? undefined,
+          artMedium: a.materials.length ? a.materials.join(', ') : undefined,
+          dateCreated: a.dateDisplay ?? undefined,
+          contentLocation: a.origin ? { '@type': 'Place', name: a.origin } : undefined,
+          image: a.images.length ? a.images.map((image) => image.src) : undefined,
+          sameAs: a.sources.length ? a.sources.map((source) => source.url) : undefined,
+          url: `https://culturio.africa/artifacts/${a.slug}`,
+          isPartOf: { '@type': 'WebSite', name: 'Culturio', url: 'https://culturio.africa/' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://culturio.africa/' },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: 'Gallery',
+              item: 'https://culturio.africa/gallery'
+            },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: a.title,
+              item: `https://culturio.africa/artifacts/${a.slug}`
+            }
+          ]
+        }
+      ]
+    })
   );
 </script>
 

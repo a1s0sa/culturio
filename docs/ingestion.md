@@ -101,8 +101,11 @@ pnpm --dir apps/web exec wrangler d1 migrations apply DB --remote --config wrang
 
 ## Local development
 
-Local Wrangler Queues, Workflows, R2, D1, and Images bindings are emulated where
-available. Add local secret values to `apps/web/.dev.vars` (ignored by Git):
+Wrangler locally simulates configured D1, Queue, and Workflow bindings. The
+current config does not enable `MEDIA` or `IMAGES`, so jobs that need those
+bindings will not complete their image-storage steps locally. Cloudflare Images
+is not locally simulated; it needs a remote binding connection for image
+processing. Add local secret values to `apps/web/.dev.vars` (ignored by Git):
 
 ```dotenv
 INGESTION_TRIGGER_SECRET=local-development-token
@@ -115,16 +118,18 @@ Run the adapter build and serve the wrapped Worker in workerd:
 pnpm --filter @culturio/web dev:worker
 ```
 
-Discovery can be triggered locally with a small batch:
+Build, apply local D1 migrations, start Wrangler, and trigger a small Met batch
+with one command:
 
 ```sh
-curl -X POST http://localhost:8787/api/ingestion/discover \
-  -H 'authorization: Bearer local-development-token' \
-  -H 'content-type: application/json' \
-  -d '{"source":"met","limit":5}'
+pnpm --filter @culturio/web ingest:local -- --source met --limit 5
 ```
 
-This performs live museum API requests. For offline tests, use the adapter and
+The command reads `INGESTION_TRIGGER_SECRET` from `apps/web/.dev.vars`, leaves
+Wrangler running so local Queue and Workflow jobs can process, and stops when
+you press Ctrl+C. The default source and limit are `met` and `5`. Supported
+sources are `met`, `smithsonian`, and `all`; the limit is 1–20. Discovery makes
+live museum API requests. For offline tests, use the adapter and
 binding mocks in the ingestion test suite instead.
 
 ## Deployment and monitoring

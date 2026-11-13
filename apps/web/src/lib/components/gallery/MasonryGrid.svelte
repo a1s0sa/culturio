@@ -2,6 +2,7 @@
   import { onMount, tick } from 'svelte';
   import type { ArtifactCardView } from '@culturio/db';
   import ArtifactCard from './ArtifactCard.svelte';
+  import { revealOnScroll } from '$lib/actions/reveal-on-scroll';
   let {
     items,
     onopen
@@ -34,6 +35,7 @@
 <div class="masonry" bind:this={grid}>
   {#each items as artifact, index (artifact.id)}<div
       class="cell"
+      use:revealOnScroll={index % 6}
       data-ratio={artifact.image ? artifact.image.height / artifact.image.width : 1.15}
     >
       <ArtifactCard {artifact} eager={index < 2} {onopen} />
