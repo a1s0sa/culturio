@@ -84,7 +84,7 @@
     name="description"
     content="Search Culturio’s archive of African artifacts by object, culture, material, place, or period."
   />
-  <meta name="robots" content="noindex,follow" />
+  <meta name="robots" content={page.url.search ? 'noindex,follow' : 'index,follow'} />
   <link rel="canonical" href="https://culturio.africa/search" />
 </svelte:head>
 

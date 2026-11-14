@@ -6,7 +6,7 @@ const escape = (value: string) =>
     (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[char]!
   );
 export const GET: RequestHandler = async ({ setHeaders }) => {
-  const staticPaths = ['', 'gallery', 'about', 'museum'];
+  const staticPaths = ['', 'gallery', 'search', 'about', 'museum'];
   const rows = env.DB
     ? (
         await env.DB.prepare(
