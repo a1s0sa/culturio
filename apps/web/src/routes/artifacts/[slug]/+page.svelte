@@ -45,12 +45,14 @@
 </script>
 
 <svelte:head>
-  <title>{a.title} — Culturio</title><meta
+  <title>{a.title} — Culturio</title>
+  <meta
     name="description"
     content={a.description?.slice(0, 155) ??
       `Explore ${a.title}, a historical African artifact in the Culturio archive.`}
-  /><link rel="canonical" href={`https://culturio.africa/artifacts/${a.slug}`} />
-  />{@html `<script type="application/ld+json">${json}<\/script>`}
+  />
+  <link rel="canonical" href={`https://culturio.africa/artifacts/${a.slug}`} />
+  {@html `<script type="application/ld+json">${json}<\/script>`}
 </svelte:head>
 <SocialMeta
   title={`${a.title} — Culturio`}
