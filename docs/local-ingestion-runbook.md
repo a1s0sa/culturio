@@ -45,14 +45,17 @@ Inspect recent runs in local D1:
 pnpm --dir apps/web exec wrangler d1 execute DB --local --config wrangler.jsonc --command "SELECT id, source, status, discovered, processed, errors FROM ingestion_runs ORDER BY started_at DESC LIMIT 5;"
 ```
 
-## Local Binding Limits
+## Local Bindings
 
-Wrangler locally simulates configured D1, Queue, and Workflow bindings. The
-current `wrangler.jsonc` leaves `MEDIA` and `IMAGES` disabled, so jobs that
-reach image storage will not complete locally. Cloudflare Images is not
-simulated locally; it requires a remote binding connection for image
-processing. See Cloudflare's documentation for [local binding
-support](https://developers.cloudflare.com/workers/local-development/bindings-per-env/)
+`wrangler.jsonc` declares `MEDIA` (R2) and `IMAGES` bindings. Wrangler simulates
+them locally by default, so local ingestion does not use or modify the
+dashboard bucket and does not require dashboard bindings to be deployed. Local
+R2 data is separate from production. The offline Images implementation supports
+only a subset of transformation options, so image processing can differ from
+production or fail for unsupported options. Discovery still calls live museum
+APIs. See Cloudflare's documentation for [local binding
+support](https://developers.cloudflare.com/workers/local-development/bindings-per-env/),
+[Images in local development](https://developers.cloudflare.com/images/optimization/binding/),
 and [local Workflow development](https://developers.cloudflare.com/workflows/build/local-development/).
 
 ## Troubleshooting
@@ -63,5 +66,7 @@ and [local Workflow development](https://developers.cloudflare.com/workflows/bui
 - **No artifacts discovered:** The response still includes a run ID. Check its
   `discovered` count and the local run table; the discovery checkpoint and
   existing-record rules may leave nothing eligible in this batch.
-- **Jobs fail during image storage:** Enable and configure the required media
-  bindings before expecting image-processing jobs to finish locally.
+- **Jobs fail during image processing:** Check the local Wrangler output for an
+  unsupported Images transformation. The offline implementation has fewer
+  features than production; deploy and run against the configured Cloudflare
+  bindings to verify full-fidelity processing.

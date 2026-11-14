@@ -29,13 +29,15 @@
   );
 </script>
 
-<svelte:head
-  ><title>Culturio — Africa's history through its artifacts</title><meta
+<svelte:head>
+  <title>Culturio — Africa's history through its artifacts</title>
+  <meta
     name="description"
     content="Discover historical objects, craftsmanship, and cultural heritage from civilizations across Africa."
-  /><link rel="canonical" href="https://culturio.africa/" />
-  />{@html `<script type="application/ld+json">${jsonLd}<\/script>`}</svelte:head
->
+  />
+  <link rel="canonical" href="https://culturio.africa/" />
+  {@html `<script type="application/ld+json">${jsonLd}<\/script>`}
+</svelte:head>
 <SocialMeta
   title="Culturio — Africa's history through its artifacts"
   description="Discover historical objects, craftsmanship, and cultural heritage from civilizations across Africa."
