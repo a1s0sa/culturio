@@ -4,6 +4,7 @@
   import type { ArtifactCardView } from '@culturio/db';
   import MasonryGrid from '$lib/components/gallery/MasonryGrid.svelte';
   import LoadMore from '$lib/components/gallery/LoadMore.svelte';
+  import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -87,6 +88,13 @@
   <meta name="robots" content={page.url.search ? 'noindex,follow' : 'index,follow'} />
   <link rel="canonical" href="https://culturio.africa/search" />
 </svelte:head>
+<SocialMeta
+  title={data.query ? `Search “${data.query}” — Culturio` : 'Search the archive — Culturio'}
+  description="Search Culturio's archive of African artifacts by object, culture, material, place, or period."
+  url="https://culturio.africa/search"
+  image="https://culturio.africa/opengraph/culturio-home.jpg"
+  imageAlt="Culturio's open archive of African artifacts"
+/>
 
 <main class="page-shell">
   <section class="search-hero" aria-labelledby="search-title">

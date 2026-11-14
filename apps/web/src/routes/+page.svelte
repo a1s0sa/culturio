@@ -1,5 +1,6 @@
 <script lang="ts">
   import MasonryGrid from '$lib/components/gallery/MasonryGrid.svelte';
+  import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
   import { revealOnScroll } from '$lib/actions/reveal-on-scroll';
   import { serializeJsonLd } from '$lib/seo/json-ld';
   let { data } = $props();
@@ -32,14 +33,16 @@
   ><title>Culturio — Africa's history through its artifacts</title><meta
     name="description"
     content="Discover historical objects, craftsmanship, and cultural heritage from civilizations across Africa."
-  /><link rel="canonical" href="https://culturio.africa/" /><meta
-    property="og:title"
-    content="Culturio — Africa's history through its artifacts"
-  /><meta
-    property="og:description"
-    content="An image-first digital archive of African cultural heritage."
+  /><link rel="canonical" href="https://culturio.africa/" />
   />{@html `<script type="application/ld+json">${jsonLd}<\/script>`}</svelte:head
 >
+<SocialMeta
+  title="Culturio — Africa's history through its artifacts"
+  description="Discover historical objects, craftsmanship, and cultural heritage from civilizations across Africa."
+  url="https://culturio.africa/"
+  image="https://culturio.africa/opengraph/culturio-home.jpg"
+  imageAlt="Culturio's open archive of African artifacts"
+/>
 <main>
   <section class="hero page-shell">
     <div>

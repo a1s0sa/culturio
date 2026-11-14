@@ -1,5 +1,6 @@
 <script lang="ts">
   import ArtifactDetails from '$lib/components/artifacts/ArtifactDetails.svelte';
+  import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
   import { serializeJsonLd } from '$lib/seo/json-ld';
   let { data } = $props();
   let a = $derived(data.artifact);
@@ -48,15 +49,19 @@
     name="description"
     content={a.description?.slice(0, 155) ??
       `Explore ${a.title}, a historical African artifact in the Culturio archive.`}
-  /><link rel="canonical" href={`https://culturio.africa/artifacts/${a.slug}`} /><meta
-    property="og:type"
-    content="article"
-  /><meta property="og:title" content={`${a.title} — Culturio`} /><meta
-    property="og:description"
-    content={a.description?.slice(0, 200) ?? a.dateDisplay ?? 'Historical African artifact'}
-  />{#if a.images[0]}<meta property="og:image" content={a.images[0].src} />{/if}
-  {@html `<script type="application/ld+json">${json}<\/script>`}
+  /><link rel="canonical" href={`https://culturio.africa/artifacts/${a.slug}`} />
+  />{@html `<script type="application/ld+json">${json}<\/script>`}
 </svelte:head>
+<SocialMeta
+  title={`${a.title} — Culturio`}
+  description={a.description?.slice(0, 200) ?? a.dateDisplay ?? 'Historical African artifact'}
+  url={`https://culturio.africa/artifacts/${a.slug}`}
+  image="https://culturio.africa/opengraph/culturio-home-1.jpg"
+  imageAlt="Culturio's archive of African artifacts"
+  type="article"
+  imageWidth={600}
+  imageHeight={600}
+/>
 <main class="page-shell detail">
   <nav aria-label="Breadcrumb">
     <a href="/gallery">Gallery</a><span> / </span><span aria-current="page">{a.title}</span>

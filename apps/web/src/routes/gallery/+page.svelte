@@ -7,6 +7,7 @@
   import GalleryFilters from '$lib/components/gallery/GalleryFilters.svelte';
   import LoadMore from '$lib/components/gallery/LoadMore.svelte';
   import ArtifactModal from '$lib/components/artifacts/ArtifactModal.svelte';
+  import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
   import { serializeJsonLd } from '$lib/seo/json-ld';
   let { data } = $props();
   let items = $state<ArtifactCardView[]>(untrack(() => data.page.items));
@@ -103,6 +104,13 @@
     href="https://culturio.africa/gallery"
   />{@html `<script type="application/ld+json">${jsonLd}<\/script>`}</svelte:head
 >
+<SocialMeta
+  title="Explore African artifacts — Culturio"
+  description="Discover African historical artifacts by culture, origin, period, material, and type."
+  url="https://culturio.africa/gallery"
+  image="https://culturio.africa/opengraph/culturio-gallery.jpg"
+  imageAlt="Explore Culturio's African artifact gallery"
+/>
 <main class="page-shell">
   <header class="intro">
     <div>

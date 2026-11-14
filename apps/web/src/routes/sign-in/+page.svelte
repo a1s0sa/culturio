@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PageProps } from './$types';
+  import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
   import { untrack } from 'svelte';
 
   let { data }: PageProps = $props();
@@ -38,8 +39,20 @@
 
 <svelte:head>
   <title>Sign in — Culturio</title>
+  <meta
+    name="description"
+    content="Sign in to continue exploring Culturio's archive of African artifacts."
+  />
   <meta name="robots" content="noindex" />
+  <link rel="canonical" href="https://culturio.africa/sign-in" />
 </svelte:head>
+<SocialMeta
+  title="Sign in — Culturio"
+  description="Sign in to continue exploring Culturio's archive of African artifacts."
+  url="https://culturio.africa/sign-in"
+  image="https://culturio.africa/opengraph/culturio-home.jpg"
+  imageAlt="Culturio's open archive of African artifacts"
+/>
 
 <main class="page-shell">
   <section aria-labelledby="sign-in-title">

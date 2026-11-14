@@ -1,9 +1,20 @@
+<script lang="ts">
+  import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
+</script>
+
 <svelte:head
   ><title>About — Culturio</title><meta
     name="description"
     content="How Culturio preserves provenance, uncertainty, and cultural heritage rights."
   /><link rel="canonical" href="https://culturio.africa/about" /></svelte:head
 >
+<SocialMeta
+  title="About — Culturio"
+  description="How Culturio preserves provenance, uncertainty, and cultural heritage rights."
+  url="https://culturio.africa/about"
+  image="https://culturio.africa/opengraph/culturio-about.jpg"
+  imageAlt="Culturio's mission to preserve provenance and cultural heritage"
+/>
 <main class="page-shell prose">
   <p class="eyebrow">About Culturio</p>
   <h1 class="editorial-title">An archive built around provenance.</h1>

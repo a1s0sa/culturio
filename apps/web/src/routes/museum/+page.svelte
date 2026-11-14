@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
   import MuseumConceptPlan from '$lib/components/museum/MuseumConceptPlan.svelte';
+  import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
   import { museumConcept } from '$lib/three/config/museum';
 
   let BlockoutScene = $state<Component | null>(null);
@@ -45,6 +46,13 @@
   />
   <link rel="canonical" href="https://culturio.africa/museum" />
 </svelte:head>
+<SocialMeta
+  title="Museum Blockout — Culturio"
+  description="Explore and review Culturio's architectural concept for a virtual museum."
+  url="https://culturio.africa/museum"
+  image="https://culturio.africa/opengraph/culturio-museum.jpg"
+  imageAlt="Culturio's virtual museum concept"
+/>
 
 <main>
   <section class="museum-hero page-shell">
