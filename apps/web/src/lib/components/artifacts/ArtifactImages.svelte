@@ -2,6 +2,11 @@
   import type { ArtifactImageView } from '@culturio/db';
   let { images, title }: { images: ArtifactImageView[]; title: string } = $props();
   let active = $state(0);
+  function institutionName(institution: string) {
+    if (institution === 'met') return 'The Metropolitan Museum of Art';
+    if (institution === 'smithsonian') return 'Smithsonian Institution';
+    return institution;
+  }
 </script>
 
 {#if images.length}<section aria-label={`${title} images`} class="viewer">
@@ -16,10 +21,22 @@
         fetchpriority="high"
       />
     </div>
+    {#if images[active]?.sourceUrl}
+      <p class="credit">
+        Image credit:
+        <a href={images[active].sourceUrl} rel="external noreferrer">
+          {images[active].attribution ||
+            institutionName(images[active].sourceInstitution ?? 'Collection')}
+        </a>
+        {#if images[active]?.licenseUrl}
+          · <a href={images[active].licenseUrl} rel="external noreferrer">License</a>
+        {/if}
+      </p>
+    {/if}
     {#if images.length > 1}<div class="thumbs" role="list">
-        {#each images as image, index}<button
+        {#each images as image, index (image.id)}<button
             type="button"
-            class:active={index === active}
+            class={{ active: index === active }}
             onclick={() => (active = index)}
             aria-label={`Show image ${index + 1}`}
             ><img src={image.src} alt="" width="72" height="72" loading="lazy" /></button
@@ -51,6 +68,17 @@
     display: flex;
     gap: 0.5rem;
     overflow: auto;
+  }
+  .credit {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+  .credit a {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
   .thumbs button {
     border: 2px solid transparent;

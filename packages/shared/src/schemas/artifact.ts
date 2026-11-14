@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { GEOGRAPHY_CONFIDENCES, PUBLICATION_STATUSES, SOURCE_NAMES } from '../constants/enums.js';
 
-export const sourceNameSchema = z.enum(['met', 'smithsonian']);
-export const publicationStatusSchema = z.enum(['draft', 'review', 'published', 'restricted']);
+export const sourceNameSchema = z.enum(SOURCE_NAMES);
+export const publicationStatusSchema = z.enum(PUBLICATION_STATUSES);
 export const licenseSchema = z.object({
   identifier: z.string().trim().min(1).nullable(),
   url: z.url().nullable(),
@@ -45,7 +46,7 @@ export const normalizedArtifactSchema = z
     sourceAttribution: z.string().trim().nullable(),
     metadataLicense: z.string().trim().nullable(),
     raw: z.record(z.string(), z.unknown()),
-    geographyConfidence: z.enum(['confirmed', 'ambiguous'])
+    geographyConfidence: z.enum(GEOGRAPHY_CONFIDENCES)
   })
   .refine(
     (value) =>

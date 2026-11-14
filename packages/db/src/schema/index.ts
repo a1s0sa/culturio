@@ -1,4 +1,13 @@
 import { relations, sql } from 'drizzle-orm';
+import {
+  IMAGE_VARIANT_NAMES,
+  INGESTION_JOB_RESULTS,
+  INGESTION_JOB_STATUSES,
+  INGESTION_RUN_STATUSES,
+  PUBLICATION_STATUSES,
+  REVIEW_RECORD_STATUSES,
+  SOURCE_NAMES
+} from '@culturio/shared';
 export * from './auth.js';
 import {
   check,
@@ -43,9 +52,7 @@ export const artifacts = sqliteTable(
       .notNull()
       .default(sql`'[]'`),
     dimensions: text('dimensions'),
-    publicationStatus: text('publication_status', {
-      enum: ['draft', 'review', 'published', 'restricted']
-    })
+    publicationStatus: text('publication_status', { enum: PUBLICATION_STATUSES })
       .notNull()
       .default('draft'),
     qualityScore: real('quality_score').notNull().default(0),
@@ -70,7 +77,7 @@ export const artifactSources = sqliteTable(
     artifactId: text('artifact_id')
       .notNull()
       .references(() => artifacts.id, { onDelete: 'cascade' }),
-    institution: text('institution').notNull(),
+    institution: text('institution', { enum: SOURCE_NAMES }).notNull(),
     externalId: text('external_id').notNull(),
     sourceUrl: text('source_url').notNull(),
     accessionNumber: text('accession_number'),
@@ -112,9 +119,7 @@ export const artifactImages = sqliteTable(
     redistributionAllowed: integer('redistribution_allowed', { mode: 'boolean' })
       .notNull()
       .default(false),
-    publicationStatus: text('publication_status', {
-      enum: ['draft', 'review', 'published', 'restricted']
-    })
+    publicationStatus: text('publication_status', { enum: PUBLICATION_STATUSES })
       .notNull()
       .default('draft'),
     processedAt: integer('processed_at', { mode: 'timestamp_ms' }),
@@ -134,7 +139,7 @@ export const imageVariants = sqliteTable(
     imageId: text('image_id')
       .notNull()
       .references(() => artifactImages.id, { onDelete: 'cascade' }),
-    name: text('name', { enum: ['thumbnail', 'medium', 'large'] }).notNull(),
+    name: text('name', { enum: IMAGE_VARIANT_NAMES }).notNull(),
     width: integer('width').notNull(),
     height: integer('height').notNull(),
     byteSize: integer('byte_size').notNull(),
@@ -182,8 +187,8 @@ export const artifactCivilizations = sqliteTable(
 
 export const ingestionRuns = sqliteTable('ingestion_runs', {
   id: text('id').primaryKey(),
-  source: text('source').notNull(),
-  status: text('status', { enum: ['running', 'completed', 'failed', 'cancelled'] }).notNull(),
+  source: text('source', { enum: SOURCE_NAMES }).notNull(),
+  status: text('status', { enum: INGESTION_RUN_STATUSES }).notNull(),
   startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
   endedAt: integer('ended_at', { mode: 'timestamp_ms' }),
   discovered: integer('discovered').notNull().default(0),
@@ -204,7 +209,7 @@ export const ingestionCheckpoints = sqliteTable(
     runId: text('run_id')
       .notNull()
       .references(() => ingestionRuns.id, { onDelete: 'cascade' }),
-    source: text('source').notNull(),
+    source: text('source', { enum: SOURCE_NAMES }).notNull(),
     cursor: text('cursor'),
     state: text('state', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
     processedExternalId: text('processed_external_id'),
@@ -219,14 +224,10 @@ export const ingestionJobs = sqliteTable(
     runId: text('run_id')
       .notNull()
       .references(() => ingestionRuns.id, { onDelete: 'cascade' }),
-    source: text('source').notNull(),
+    source: text('source', { enum: SOURCE_NAMES }).notNull(),
     externalId: text('external_id').notNull(),
-    status: text('status', {
-      enum: ['queued', 'processing', 'completed', 'skipped', 'failed', 'review']
-    })
-      .notNull()
-      .default('queued'),
-    result: text('result', { enum: ['inserted', 'updated', 'skipped'] }),
+    status: text('status', { enum: INGESTION_JOB_STATUSES }).notNull().default('queued'),
+    result: text('result', { enum: INGESTION_JOB_RESULTS }),
     failureReason: text('failure_reason'),
     attempts: integer('attempts').notNull().default(0),
     completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
@@ -242,7 +243,7 @@ export const ingestionJobs = sqliteTable(
   ]
 );
 export const ingestionDiscoveryState = sqliteTable('ingestion_discovery_state', {
-  source: text('source').primaryKey(),
+  source: text('source', { enum: SOURCE_NAMES }).primaryKey(),
   offset: integer('offset').notNull().default(0),
   nextRequestAt: integer('next_request_at').notNull().default(0),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
@@ -254,15 +255,13 @@ export const reviewRecords = sqliteTable(
   {
     id: text('id').primaryKey(),
     runId: text('run_id').references(() => ingestionRuns.id, { onDelete: 'set null' }),
-    source: text('source').notNull(),
+    source: text('source', { enum: SOURCE_NAMES }).notNull(),
     externalId: text('external_id'),
     artifactId: text('artifact_id').references(() => artifacts.id, { onDelete: 'set null' }),
     reasonCode: text('reason_code').notNull(),
     reason: text('reason').notNull(),
     payload: text('payload', { mode: 'json' }),
-    status: text('status', { enum: ['open', 'resolved', 'dismissed'] })
-      .notNull()
-      .default('open'),
+    status: text('status', { enum: REVIEW_RECORD_STATUSES }).notNull().default('open'),
     ...timestamps
   },
   (table) => [index('review_records_status_idx').on(table.status)]

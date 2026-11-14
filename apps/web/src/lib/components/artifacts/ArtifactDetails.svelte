@@ -3,6 +3,23 @@
   import ArtifactImages from './ArtifactImages.svelte';
   import RelatedArtifacts from './RelatedArtifacts.svelte';
   let { artifact, compact = false }: { artifact: ArtifactDetailView; compact?: boolean } = $props();
+  function institutionName(institution: string) {
+    if (institution === 'met') return 'The Metropolitan Museum of Art';
+    if (institution === 'smithsonian') return 'Smithsonian Institution';
+    return institution;
+  }
+  let imageSources = $derived.by(() => {
+    const sources: { institution: string; url: string }[] = [];
+    for (const image of artifact.images) {
+      if (
+        image.sourceInstitution &&
+        image.sourceUrl &&
+        !sources.some((source) => source.institution === image.sourceInstitution)
+      )
+        sources.push({ institution: image.sourceInstitution, url: image.sourceUrl });
+    }
+    return sources;
+  });
   let facts = $derived([
     ['Culture', artifact.culture],
     ['Civilization', artifact.civilization],
@@ -15,16 +32,34 @@
   ]);
 </script>
 
-<article class:compact>
+<article class={{ compact }}>
   <div class="visual"><ArtifactImages images={artifact.images} title={artifact.title} /></div>
   <div class="content">
     <p class="eyebrow">{artifact.artifactType ?? 'Historical artifact'}</p>
     <h1 class="editorial-title">{artifact.title}</h1>
+    {#if artifact.sources.length || imageSources.length}
+      <ul class="source-badges" aria-label="Artifact sources">
+        {#each artifact.sources as source (source.url)}
+          <li>
+            <a href={source.url} rel="external noreferrer"
+              >Record · {institutionName(source.institution)}</a
+            >
+          </li>
+        {/each}
+        {#each imageSources as source (source.institution)}
+          <li>
+            <a href={source.url} rel="external noreferrer"
+              >Image · {institutionName(source.institution)}</a
+            >
+          </li>
+        {/each}
+      </ul>
+    {/if}
     {#if artifact.alternativeNames.length}<p class="aliases">
         Also known as {artifact.alternativeNames.join(', ')}
       </p>{/if}
     <dl>
-      {#each facts as fact}{#if fact[1]}<div>
+      {#each facts as fact (fact[0])}{#if fact[1]}<div>
             <dt>{fact[0]}</dt>
             <dd>{fact[1]}</dd>
           </div>{/if}{/each}
@@ -35,8 +70,8 @@
       </div>{/if}
     {#if artifact.sources.length}<section class="sources">
         <h2>Sources &amp; attribution</h2>
-        {#each artifact.sources as source}<p>
-            <a href={source.url} rel="external noreferrer">{source.institution}</a
+        {#each artifact.sources as source (source.url)}<p>
+            <a href={source.url} rel="external noreferrer">{institutionName(source.institution)}</a
             >{#if source.accessionNumber}
               · {source.accessionNumber}{/if}{#if source.attribution}<br /><span
                 >{source.attribution}</span
@@ -66,6 +101,27 @@
   .aliases {
     color: var(--color-muted);
     font-style: italic;
+  }
+  .source-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin: 1rem 0;
+    padding: 0;
+    list-style: none;
+  }
+  .source-badges a {
+    display: inline-flex;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+    color: var(--color-ink);
+    background: var(--color-ivory);
+    font-size: 0.7rem;
+    text-decoration: none;
+  }
+  .source-badges a:hover {
+    border-color: var(--color-bronze);
   }
   dl {
     margin: 2rem 0;

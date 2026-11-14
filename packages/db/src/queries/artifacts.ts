@@ -12,6 +12,9 @@ export interface ArtifactImageView {
   srcset: string;
   attribution: string | null;
   license: string | null;
+  licenseUrl: string | null;
+  sourceInstitution: string | null;
+  sourceUrl: string | null;
 }
 export interface ArtifactCardView {
   id: string;
@@ -104,7 +107,10 @@ function imageFromRow(row: Row, base: string, title: string): ArtifactImageView 
     src,
     srcset: entries.map(([url, width]) => `${url} ${width}w`).join(', '),
     attribution: row.image_attribution as string | null,
-    license: row.license_identifier as string | null
+    license: row.license_identifier as string | null,
+    licenseUrl: (row.license_url as string | null) ?? null,
+    sourceInstitution: (row.image_source_institution as string | null) ?? null,
+    sourceUrl: (row.image_source_url as string | null) ?? null
   };
 }
 function cardFromRow(row: Row, base: string): ArtifactCardView {
@@ -123,7 +129,8 @@ function cardFromRow(row: Row, base: string): ArtifactCardView {
   };
 }
 
-const imageColumns = `i.id image_id,i.original_url,i.width image_width,i.height image_height,i.dominant_color,i.attribution image_attribution,i.license_identifier,
+const imageColumns = `i.id image_id,i.original_url,i.width image_width,i.height image_height,i.dominant_color,i.attribution image_attribution,i.license_identifier,i.license_url,
+(SELECT s.institution FROM artifact_sources s WHERE s.id=i.source_id) image_source_institution,(SELECT s.source_url FROM artifact_sources s WHERE s.id=i.source_id) image_source_url,
 (SELECT object_key FROM image_variants WHERE image_id=i.id AND name='thumbnail') thumb_key,(SELECT width FROM image_variants WHERE image_id=i.id AND name='thumbnail') thumb_width,
 (SELECT object_key FROM image_variants WHERE image_id=i.id AND name='medium') medium_key,(SELECT width FROM image_variants WHERE image_id=i.id AND name='medium') medium_width,
 (SELECT object_key FROM image_variants WHERE image_id=i.id AND name='large') large_key,(SELECT width FROM image_variants WHERE image_id=i.id AND name='large') large_width,(SELECT height FROM image_variants WHERE image_id=i.id AND name='large') large_height`;
@@ -275,7 +282,7 @@ export async function getArtifactBySlug(
   const imageRows = (
     await database
       .prepare(
-        `SELECT i.id image_id,i.original_url,i.width image_width,i.height image_height,i.dominant_color,i.attribution image_attribution,i.license_identifier,${imageColumns.split('\n').slice(1).join('\n')} FROM artifact_images i WHERE i.artifact_id=? AND i.redistribution_allowed=1 AND i.original_object_key IS NOT NULL ORDER BY i.id`
+        `SELECT i.id image_id,i.original_url,i.width image_width,i.height image_height,i.dominant_color,i.attribution image_attribution,i.license_identifier,i.license_url,${imageColumns.split('\n').slice(1).join('\n')} FROM artifact_images i WHERE i.artifact_id=? AND i.redistribution_allowed=1 AND i.original_object_key IS NOT NULL ORDER BY i.id`
       )
       .bind(base.id)
       .all<Row>()

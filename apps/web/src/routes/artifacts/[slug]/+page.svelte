@@ -16,7 +16,18 @@
           artMedium: a.materials.length ? a.materials.join(', ') : undefined,
           dateCreated: a.dateDisplay ?? undefined,
           contentLocation: a.origin ? { '@type': 'Place', name: a.origin } : undefined,
-          image: a.images.length ? a.images.map((image) => image.src) : undefined,
+          image: a.images.length
+            ? a.images.map((image) => ({
+                '@type': 'ImageObject',
+                contentUrl: image.src,
+                creditText: image.attribution ?? undefined,
+                license: image.licenseUrl ?? undefined,
+                isBasedOn: image.sourceUrl
+                  ? { '@type': 'CreativeWork', url: image.sourceUrl }
+                  : undefined
+              }))
+            : undefined,
+          citation: a.sources.length ? a.sources.map((source) => source.url) : undefined,
           sameAs: a.sources.length ? a.sources.map((source) => source.url) : undefined,
           url: `https://culturio.africa/artifacts/${a.slug}`,
           isPartOf: { '@type': 'WebSite', name: 'Culturio', url: 'https://culturio.africa/' }
@@ -58,11 +69,9 @@
   title={`${a.title} — Culturio`}
   description={a.description?.slice(0, 200) ?? a.dateDisplay ?? 'Historical African artifact'}
   url={`https://culturio.africa/artifacts/${a.slug}`}
-  image="https://culturio.africa/opengraph/culturio-home-1.jpg"
+  image="https://culturio.africa/opengraph/culturio-home.jpg"
   imageAlt="Culturio's archive of African artifacts"
   type="article"
-  imageWidth={600}
-  imageHeight={600}
 />
 <main class="page-shell detail">
   <nav aria-label="Breadcrumb">
