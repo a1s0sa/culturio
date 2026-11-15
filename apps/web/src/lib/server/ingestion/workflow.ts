@@ -8,6 +8,7 @@ import {
 import { NonRetryableError } from 'cloudflare:workflows';
 import type { IngestionEnv, IngestionJob } from './types.js';
 import { retrieveAndNormalize } from './types.js';
+import { HttpError } from '../../../../../../scripts/ingestion/src/infrastructure/retry.js';
 
 const stepRetries = {
   retries: { limit: 4, delay: '10 seconds' as const, backoff: 'exponential' as const }
@@ -51,28 +52,36 @@ export class IngestionWorkflow extends WorkflowEntrypoint<IngestionEnv, Ingestio
         'retrieve-and-normalize-metadata',
         stepRetries,
         async () => {
+          const key = `ingestion/jobs/${job.id}/artifact.json`;
+          if (await this.env.MEDIA.head(key)) return key;
+
           let artifact: Artifact;
           try {
             artifact = normalizedArtifactSchema.parse(
               await retrieveAndNormalize(this.env, job.source, job.externalId)
             );
           } catch (error) {
+            const unavailable = error instanceof HttpError && error.status === 404;
             if (
               error instanceof Error &&
-              (error.name === 'ZodError' ||
+              (unavailable ||
+                error.name === 'ZodError' ||
                 error.message.includes('does not establish African origin'))
             ) {
               await createReview(
                 this.env,
                 job,
                 error.message,
-                error.name === 'ZodError' ? 'invalid_metadata' : 'source_geography'
+                unavailable
+                  ? 'source_unavailable'
+                  : error.name === 'ZodError'
+                    ? 'invalid_metadata'
+                    : 'source_geography'
               );
               throw new NonRetryableError(error.message);
             }
             throw error;
           }
-          const key = `ingestion/jobs/${job.id}/artifact.json`;
           await this.env.MEDIA.put(key, JSON.stringify(artifact), {
             httpMetadata: { contentType: 'application/json' }
           });

@@ -3,10 +3,12 @@
 ## Runtime and flow
 
 Production ingestion runs in the deployed Cloudflare Worker. The authenticated
-`POST /api/ingestion/discover` endpoint reads a durable per-source offset, calls
-the existing Met or Smithsonian discovery adapter, stores job/run state in D1,
-and publishes bounded batches to `culturio-ingest`. Discovery retrieves record
-IDs only; it does not fetch artifact images.
+`POST /api/ingestion/discover` endpoint reads durable source state, calls the
+Met or Smithsonian discovery adapter, stores job/run state in D1, and publishes
+bounded batches to `culturio-ingest`. Met search terms match any object data,
+so discovery fetches candidate metadata and checks its origin and image list
+before queueing it. Confirmed Met metadata is cached in R2 for the Workflow to
+reuse. Discovery does not download or process artifact images.
 
 Each discovery request scans at most 20 source IDs and queues at most 20
 records. D1-known records are only queued again after 30 days, allowing changed
@@ -21,8 +23,10 @@ instance. Its `job_<sha256-prefix>` ID is deterministic for that discovered
 record and run. A repeated delivery confirms the existing instance and ACKs;
 transient Workflow creation errors are retried by Queues. Invalid messages are
 retried up to the configured limit and then sent to `culturio-ingest-dlq`.
-Permanent metadata validation or geography failures create a review record and
-are sent to the DLQ by the Workflow after being marked failed in D1.
+Met records with missing or ambiguous African origin, missing images, invalid
+metadata, or a source 404 are recorded for review before a Workflow is created.
+The Workflow also records permanent metadata failures and sends those jobs to
+the DLQ after marking them failed in D1.
 
 Each Workflow runs durable steps for metadata retrieval and normalization,
 duplicate detection, image storage, D1 persistence, and job completion. Source
@@ -40,9 +44,12 @@ Existing retry handling honors each API's `Retry-After` response.
 
 Per-job status, attempts, failure reason, and completion time are recorded in
 `ingestion_jobs`. Run counts and resumable discovery offsets are recorded in
-`ingestion_runs` and `ingestion_discovery_state`. Existing artifact, source,
-image, variant, and review tables remain the ingestion data model. Migration
-`0002_ingestion_jobs.sql` adds only job tracking and discovery state.
+`ingestion_runs` and `ingestion_discovery_state`. For Met, discovery state stores
+the active curated search term and offset so runs can resume across country,
+region, and culture queries. Existing artifact, source, image, variant, and
+review tables remain the ingestion data model. Migration `0002_ingestion_jobs.sql`
+adds job tracking and discovery state; `0004_met_discovery_cursor.sql` adds the
+Met search cursor.
 
 ## Job payload
 

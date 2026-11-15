@@ -15,7 +15,7 @@ The database is SQLite on Cloudflare D1. The Drizzle definitions in `packages/db
 - `ingestion_runs` records a source import and its counters/status.
 - `ingestion_checkpoints` stores resumable cursor/state per run and source.
 - `ingestion_jobs` tracks each discovered external record, its attempts, status, result, and failure reason.
-- `ingestion_discovery_state` persists source-level discovery offsets and request timing.
+- `ingestion_discovery_state` persists source-level discovery offsets, the active Met search term cursor, and request timing.
 - `review_records` stores metadata, geography, and rights issues that need a human decision. Run and artifact links are nullable so review history can survive deletion of those records.
 
 ## Authentication and search

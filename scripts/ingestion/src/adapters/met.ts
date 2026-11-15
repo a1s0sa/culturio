@@ -1,4 +1,5 @@
 import {
+  AFRICAN_SEARCH_TERMS,
   classifyAfricanGeography,
   normalizedArtifactSchema,
   parseHistoricalDate,
@@ -14,6 +15,7 @@ const searchSchema = z.object({
   total: z.number(),
   objectIDs: z.array(z.number()).nullable().default([])
 });
+const searchTerms: string[] = [...new Set(AFRICAN_SEARCH_TERMS)];
 const metObjectSchema = z
   .object({
     objectID: z.number(),
@@ -53,26 +55,39 @@ export class MetAdapter implements SourceAdapter<MetObject> {
     checkpoint: SourceCheckpoint,
     signal?: AbortSignal
   ): AsyncIterable<DiscoveredRecord> {
+    const savedTermIndex = checkpoint.cursor ? searchTerms.indexOf(checkpoint.cursor) : -1;
+    let termIndex = savedTermIndex >= 0 ? savedTermIndex : 0;
     let offset = checkpoint.offset ?? 0;
-    while (true) {
+    const seen = new Set<number>();
+
+    while (termIndex < searchTerms.length) {
+      const term = searchTerms[termIndex]!;
       const url = new URL('https://collectionapi.metmuseum.org/public/collection/v1.1/search');
       Object.entries({
-        q: 'African',
+        q: term,
         hasImages: 'true',
         offset: String(offset),
         limit: '200'
       }).forEach(([key, value]) => url.searchParams.set(key, value));
       const payload = searchSchema.parse(await this.getJson(url, signal));
       const objectIds = payload.objectIDs ?? [];
-      if (!objectIds.length) return;
-      for (const id of objectIds)
+
+      for (let index = 0; index < objectIds.length; index += 1) {
+        const id = objectIds[index]!;
+        if (seen.has(id)) continue;
+        seen.add(id);
         yield {
           source: this.source,
           externalId: String(id),
-          checkpoint: { offset: offset + objectIds.indexOf(id) + 1 }
+          checkpoint: { cursor: term, offset: offset + index + 1 }
         };
+      }
+
       offset += objectIds.length;
-      if (offset >= payload.total || offset >= 10_000) return;
+      if (!objectIds.length || offset >= payload.total || offset >= 10_000) {
+        termIndex += 1;
+        offset = 0;
+      }
     }
   }
   async fetchRecord(id: string, signal?: AbortSignal): Promise<MetObject> {
@@ -86,14 +101,10 @@ export class MetAdapter implements SourceAdapter<MetObject> {
     );
   }
   async normalize(record: MetObject): Promise<NormalizedArtifact> {
-    const geography = [
-      record.country,
-      record.region,
-      record.subregion,
-      record.locale,
-      record.culture
-    ].filter(Boolean);
-    const classification = classifyAfricanGeography(geography);
+    const primaryGeography = [record.country, record.region].filter(Boolean);
+    const secondaryGeography = [record.subregion, record.locale, record.culture].filter(Boolean);
+    const classification = classifyAfricanGeography(primaryGeography, secondaryGeography);
+    const geography = [...primaryGeography, ...secondaryGeography];
     if (classification === 'not-african')
       throw new Error('Source metadata does not establish African origin');
     const parsed = parseHistoricalDate(record.objectDate);

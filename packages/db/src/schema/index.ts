@@ -245,6 +245,7 @@ export const ingestionJobs = sqliteTable(
 export const ingestionDiscoveryState = sqliteTable('ingestion_discovery_state', {
   source: text('source', { enum: SOURCE_NAMES }).primaryKey(),
   offset: integer('offset').notNull().default(0),
+  cursor: text('cursor'),
   nextRequestAt: integer('next_request_at').notNull().default(0),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
     .notNull()

@@ -7,7 +7,35 @@ describe('ingestion discovery', () => {
   it('publishes ID-only jobs in bounded batches and advances the source checkpoint', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(Response.json({ total: 2, objectIDs: [42, 43] }))
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith('/search')) {
+          return Response.json({ total: 2, objectIDs: [42, 43] });
+        }
+        const objectID = Number(url.pathname.split('/').at(-1));
+        return Response.json({
+          objectID,
+          isPublicDomain: true,
+          primaryImage: `https://images.metmuseum.org/${objectID}.jpg`,
+          additionalImages: [],
+          objectURL: `https://www.metmuseum.org/art/collection/search/${objectID}`,
+          title: 'Artifact',
+          objectName: 'Artifact',
+          culture: 'Benin',
+          country: 'Nigeria',
+          region: '',
+          subregion: '',
+          locale: '',
+          period: '',
+          dynasty: '',
+          objectDate: '',
+          medium: '',
+          dimensions: '',
+          creditLine: '',
+          repository: '',
+          tags: []
+        });
+      })
     );
     const bound: unknown[][] = [];
     const db = {
@@ -23,8 +51,9 @@ describe('ingestion discovery', () => {
       batch: vi.fn().mockResolvedValue([])
     };
     const sendBatch = vi.fn().mockResolvedValue(undefined);
+    const media = { put: vi.fn().mockResolvedValue(undefined), delete: vi.fn() };
     const result = await discoverAndQueue(
-      { DB: db, INGEST_QUEUE: { sendBatch } } as never,
+      { DB: db, MEDIA: media, INGEST_QUEUE: { sendBatch } } as never,
       'met',
       1
     );

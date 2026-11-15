@@ -52,7 +52,7 @@ function rateLimitedFetcher(env: IngestionEnv, source: SourceName): typeof fetch
          updated_at=excluded.updated_at
        RETURNING next_request_at-? AS request_at`
     )
-      .bind(source, now + interval, now, now, now, interval, interval)
+      .bind(source, now + interval, now, now, interval, interval)
       .first<{ request_at: number }>();
     const wait = (slot?.request_at ?? now) - Date.now();
     if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
