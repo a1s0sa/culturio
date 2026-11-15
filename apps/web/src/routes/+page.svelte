@@ -4,6 +4,8 @@
   import { revealOnScroll } from '$lib/actions/reveal-on-scroll';
   import { serializeJsonLd } from '$lib/seo/json-ld';
   let { data } = $props();
+  let featuredTrack = $state<HTMLDivElement>();
+  let featuredIndex = $state(0);
   let jsonLd = $derived(
     serializeJsonLd({
       '@context': 'https://schema.org',
@@ -27,6 +29,24 @@
       ]
     })
   );
+  function moveFeatured(direction: -1 | 1) {
+    if (!featuredTrack) return;
+    const firstCard = featuredTrack.querySelector<HTMLElement>('.feature-card');
+    if (!firstCard) return;
+    const gap = Number.parseFloat(getComputedStyle(featuredTrack).columnGap) || 0;
+    featuredTrack.scrollBy({
+      left: direction * (firstCard.getBoundingClientRect().width + gap),
+      behavior: 'smooth'
+    });
+  }
+
+  function updateFeaturedIndex() {
+    if (!featuredTrack) return;
+    const firstCard = featuredTrack.querySelector<HTMLElement>('.feature-card');
+    if (!firstCard) return;
+    const gap = Number.parseFloat(getComputedStyle(featuredTrack).columnGap) || 0;
+    featuredIndex = Math.round(featuredTrack.scrollLeft / (firstCard.offsetWidth + gap));
+  }
 </script>
 
 <svelte:head>
@@ -63,42 +83,71 @@
       </div>
     </div>
   </section>
-  {#if data.featured.length}<section class="featured page-shell">
+  {#if data.featured.length}
+    <section class="featured page-shell" aria-labelledby="featured-heading">
       <div class="section-heading">
         <div>
           <p class="eyebrow">From the archive</p>
-          <h2 class="editorial-title">Featured artifacts</h2>
+          <h2 id="featured-heading" class="editorial-title">Featured artifacts</h2>
+        </div>
+        <div class="carousel-controls" aria-label="Featured artifact controls">
+          <span class="carousel-count" aria-live="polite">
+            {String(featuredIndex + 1).padStart(2, '0')} / {String(data.featured.length).padStart(
+              2,
+              '0'
+            )}
+          </span>
+          <button
+            type="button"
+            aria-label="Show previous featured artifact"
+            disabled={featuredIndex === 0}
+            onclick={() => moveFeatured(-1)}>←</button
+          >
+          <button
+            type="button"
+            aria-label="Show next featured artifact"
+            disabled={featuredIndex >= data.featured.length - 1}
+            onclick={() => moveFeatured(1)}>→</button
+          >
         </div>
       </div>
-      <div class="feature-grid">
-        {#each data.featured as artifact, index (artifact.id)}<a
-            use:revealOnScroll={index % 4}
-            href={`/artifacts/${artifact.slug}`}
-            ><div
-              class="feature-image"
-              style:background={artifact.image?.dominantColor ?? '#d8cabb'}
-              style:aspect-ratio={artifact.image
-                ? `${artifact.image.width}/${artifact.image.height}`
-                : '4/5'}
-            >
-              {#if artifact.image}<img
-                  src={artifact.image.src}
-                  srcset={artifact.image.srcset || undefined}
-                  sizes={index === 0
-                    ? '(max-width: 800px) 100vw, 50vw'
-                    : '(max-width: 800px) 50vw, 22vw'}
-                  width={artifact.image.width}
-                  height={artifact.image.height}
-                  alt={artifact.image.alt}
-                  loading={index === 0 ? 'eager' : 'lazy'}
-                  fetchpriority={index === 0 ? 'high' : 'auto'}
-                />{/if}
-            </div>
-            <h3 class="editorial-title">{artifact.title}</h3>
-            <p>{artifact.culture ?? artifact.origin}</p></a
-          >{/each}
+      <div
+        bind:this={featuredTrack}
+        class="feature-viewport"
+        role="region"
+        aria-label="Featured artifacts carousel"
+        onscroll={updateFeaturedIndex}
+      >
+        <ul class="feature-track">
+          {#each data.featured as artifact, index (artifact.id)}
+            <li class="feature-card" use:revealOnScroll={index % 4}>
+              <a href={`/artifacts/${artifact.slug}`}>
+                <div
+                  class="feature-image"
+                  style:background={artifact.image?.dominantColor ?? '#d8cabb'}
+                >
+                  {#if artifact.image}
+                    <img
+                      src={artifact.image.src}
+                      srcset={artifact.image.srcset || undefined}
+                      sizes="(max-width: 700px) 82vw, (max-width: 1200px) 32vw, 384px"
+                      width={artifact.image.width}
+                      height={artifact.image.height}
+                      alt={artifact.image.alt}
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                      fetchpriority={index === 0 ? 'high' : 'auto'}
+                    />
+                  {/if}
+                </div>
+                <h3 class="editorial-title">{artifact.title}</h3>
+                <p>{artifact.culture ?? artifact.origin}</p>
+              </a>
+            </li>
+          {/each}
+        </ul>
       </div>
-    </section>{/if}
+    </section>
+  {/if}
   <section class="preview page-shell">
     <div class="section-heading">
       <div>
@@ -170,34 +219,94 @@
     text-decoration: underline;
     text-underline-offset: 4px;
   }
-  .feature-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
-    gap: 1rem;
+  .carousel-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
   }
-  .feature-grid a:first-child {
-    grid-row: span 2;
+  .carousel-count {
+    margin-right: 0.35rem;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .carousel-controls button {
+    display: grid;
+    width: 2.7rem;
+    aspect-ratio: 1;
+    place-items: center;
+    border: 1px solid var(--color-line);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-ink);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition:
+      background 180ms ease,
+      color 180ms ease,
+      opacity 180ms ease;
+  }
+  .carousel-controls button:not(:disabled):hover {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+  .carousel-controls button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .feature-viewport {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .feature-viewport::-webkit-scrollbar {
+    display: none;
+  }
+  .feature-track {
+    display: flex;
+    gap: clamp(0.8rem, 1.5vw, 1.25rem);
+    width: max-content;
+    min-width: 100%;
+    margin: 0;
+    padding: 0 0 0.75rem;
+  }
+  .feature-card {
+    flex: 0 0 clamp(16rem, 29vw, 24rem);
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+  .feature-card a {
+    display: block;
+    height: 100%;
   }
   .feature-image {
+    display: grid;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    place-items: center;
     overflow: hidden;
     border-radius: 0.35rem;
-    height: calc(100% - 4rem);
   }
-  .feature-grid img {
+  .feature-image img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: contain;
-    transition: transform 0.4s;
+    transition: transform 0.5s ease;
   }
-  .feature-grid a:hover img {
-    transform: scale(1.02);
+  .feature-card a:hover img {
+    transform: scale(1.035);
   }
-  .feature-grid h3 {
+  .feature-card h3 {
     font-size: 1.45rem;
     line-height: 1;
     margin: 0.7rem 0 0.15rem;
   }
-  .feature-grid p {
+  .feature-card p {
     font-size: 0.75rem;
     color: var(--color-muted);
   }
@@ -226,16 +335,23 @@
       align-items: flex-start;
       flex-direction: column;
     }
-    .feature-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-    .feature-grid a:first-child {
-      grid-column: 1/-1;
+    .feature-card {
+      flex-basis: min(82vw, 24rem);
     }
     .section-heading {
-      align-items: start;
+      align-items: flex-start;
       gap: 1rem;
       flex-direction: column;
+    }
+    .section-heading h2 {
+      font-size: clamp(2.4rem, 9vw, 4rem);
+    }
+    .carousel-controls {
+      align-self: flex-end;
+      gap: 0.4rem;
+    }
+    .carousel-controls button {
+      width: 2.35rem;
     }
   }
 </style>
