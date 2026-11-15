@@ -12,6 +12,6 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
       : 'public, max-age=60, s-maxage=300',
     'cache-tag': 'artifacts'
   });
-  const [page, filters] = await Promise.all([listArtifacts(env, query), filtersFor(env)]);
+  const [page, filters] = await Promise.all([listArtifacts(env, query, url), filtersFor(env)]);
   return { page, filters, query };
 };

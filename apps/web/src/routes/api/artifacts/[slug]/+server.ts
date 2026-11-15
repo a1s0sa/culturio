@@ -2,8 +2,8 @@ import { env } from 'cloudflare:workers';
 import { error, json } from '@sveltejs/kit';
 import { artifactBySlug } from '$lib/server/artifacts';
 import type { RequestHandler } from './$types';
-export const GET: RequestHandler = async ({ params, setHeaders }) => {
-  const artifact = await artifactBySlug(env, params.slug);
+export const GET: RequestHandler = async ({ params, setHeaders, url }) => {
+  const artifact = await artifactBySlug(env, params.slug, url);
   if (!artifact) error(404, 'Artifact not found');
   setHeaders({
     'cache-control': 'public, max-age=60, s-maxage=300',

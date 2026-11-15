@@ -116,7 +116,7 @@ export async function discoverAndQueue(
             continue;
           }
           const metadataKey = `ingestion/jobs/${id}/artifact.json`;
-          await env.MEDIA.put(metadataKey, JSON.stringify(artifact), {
+          await env.UNPUBLISHED_MEDIA.put(metadataKey, JSON.stringify(artifact), {
             httpMetadata: { contentType: 'application/json' }
           });
           metadataKeys.push(metadataKey);
@@ -187,7 +187,9 @@ export async function discoverAndQueue(
     };
   } catch (error) {
     if (!queueMessagesSent) {
-      await Promise.all(metadataKeys.map((key) => env.MEDIA.delete(key).catch(() => undefined)));
+      await Promise.all(
+        metadataKeys.map((key) => env.UNPUBLISHED_MEDIA.delete(key).catch(() => undefined))
+      );
     }
     await env.DB.prepare(
       `UPDATE ingestion_runs SET status='failed',ended_at=?,errors=errors+1,report=?,updated_at=? WHERE id=?`

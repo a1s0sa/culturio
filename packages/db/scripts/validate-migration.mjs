@@ -6,7 +6,9 @@ for (const migration of [
   '0000_foundation.sql',
   '0001_auth.sql',
   '0002_ingestion_jobs.sql',
-  '0003_enum_validation.sql'
+  '0003_enum_validation.sql',
+  '0004_met_discovery_cursor.sql',
+  '0005_artifact_publication.sql'
 ]) {
   database.exec(readFileSync(new URL(`../migrations/${migration}`, import.meta.url), 'utf8'));
 }

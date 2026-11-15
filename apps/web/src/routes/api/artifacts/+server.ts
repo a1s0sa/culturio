@@ -11,5 +11,5 @@ export const GET: RequestHandler = async ({ url, setHeaders }) => {
       : 'public, max-age=30, s-maxage=180',
     'cache-tag': 'artifacts'
   });
-  return json(await listArtifacts(env, query));
+  return json(await listArtifacts(env, query, url));
 };

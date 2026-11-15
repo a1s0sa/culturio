@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fade } from 'svelte/transition';
   import { goto } from '$app/navigation';
   import { tick } from 'svelte';
   import type { ArtifactDetailView } from '@culturio/db';
@@ -39,6 +40,7 @@
 
 <dialog
   bind:this={dialog}
+  out:fade={{ duration: 180 }}
   onclose={close}
   aria-label={artifact ? artifact.title : 'Artifact details'}
 >
@@ -75,10 +77,38 @@
     background: var(--color-paper);
     color: var(--color-ink);
     box-shadow: 0 2rem 6rem rgba(25, 17, 12, 0.28);
+    opacity: 0;
+    transform: translateY(0.65rem) scale(0.99);
+    transition:
+      opacity 220ms ease,
+      transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      overlay 220ms allow-discrete,
+      display 220ms allow-discrete;
+  }
+  dialog[open] {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  @starting-style {
+    dialog[open] {
+      opacity: 0;
+      transform: translateY(0.65rem) scale(0.99);
+    }
   }
   dialog::backdrop {
     background: rgba(27, 21, 17, 0.72);
     backdrop-filter: blur(5px);
+    transition:
+      background-color 220ms ease,
+      backdrop-filter 220ms ease,
+      overlay 220ms allow-discrete,
+      display 220ms allow-discrete;
+  }
+  @starting-style {
+    dialog[open]::backdrop {
+      background: rgba(27, 21, 17, 0);
+      backdrop-filter: blur(0);
+    }
   }
   .body {
     padding: clamp(1.2rem, 3vw, 3rem);

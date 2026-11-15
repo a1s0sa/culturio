@@ -5,6 +5,7 @@ declare global {
     interface Env {
       DB: D1Database;
       MEDIA: R2Bucket;
+      UNPUBLISHED_MEDIA: R2Bucket;
       IMAGES: ImagesBinding;
       INGEST_QUEUE: Queue<unknown>;
       INGEST_DLQ: Queue<unknown>;

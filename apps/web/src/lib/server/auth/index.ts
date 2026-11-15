@@ -12,6 +12,11 @@ export function createAuth(env: AuthEnv) {
     appName: 'Culturio',
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
+    user: {
+      additionalFields: {
+        role: { type: 'string', required: false, defaultValue: 'member', input: false }
+      }
+    },
     database: drizzleAdapter(createDatabase(env.DB), {
       provider: 'sqlite',
       schema

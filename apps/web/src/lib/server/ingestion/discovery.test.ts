@@ -53,7 +53,7 @@ describe('ingestion discovery', () => {
     const sendBatch = vi.fn().mockResolvedValue(undefined);
     const media = { put: vi.fn().mockResolvedValue(undefined), delete: vi.fn() };
     const result = await discoverAndQueue(
-      { DB: db, MEDIA: media, INGEST_QUEUE: { sendBatch } } as never,
+      { DB: db, MEDIA: media, UNPUBLISHED_MEDIA: media, INGEST_QUEUE: { sendBatch } } as never,
       'met',
       1
     );

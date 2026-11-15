@@ -9,6 +9,7 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: optionalCredential,
   R2_SECRET_ACCESS_KEY: optionalCredential,
   R2_BUCKET_NAME: optionalCredential,
+  R2_PUBLIC_BUCKET_NAME: optionalCredential,
   R2_PUBLIC_BASE_URL: z.url().default('https://assets.culturio.africa'),
   SMITHSONIAN_API_KEY: optionalCredential,
   API_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(4),

@@ -134,7 +134,7 @@ const imageColumns = `i.id image_id,i.original_url,i.width image_width,i.height 
 (SELECT object_key FROM image_variants WHERE image_id=i.id AND name='thumbnail') thumb_key,(SELECT width FROM image_variants WHERE image_id=i.id AND name='thumbnail') thumb_width,
 (SELECT object_key FROM image_variants WHERE image_id=i.id AND name='medium') medium_key,(SELECT width FROM image_variants WHERE image_id=i.id AND name='medium') medium_width,
 (SELECT object_key FROM image_variants WHERE image_id=i.id AND name='large') large_key,(SELECT width FROM image_variants WHERE image_id=i.id AND name='large') large_width,(SELECT height FROM image_variants WHERE image_id=i.id AND name='large') large_height`;
-const imageJoin = `LEFT JOIN artifact_images i ON i.id=(SELECT ai.id FROM artifact_images ai WHERE ai.artifact_id=a.id AND ai.redistribution_allowed=1 AND ai.original_object_key IS NOT NULL ORDER BY ai.id LIMIT 1)`;
+const imageJoin = `LEFT JOIN artifact_images i ON i.id=(SELECT ai.id FROM artifact_images ai WHERE ai.artifact_id=a.id AND ai.publication_status='published' AND ai.redistribution_allowed=1 AND ai.original_object_key IS NOT NULL ORDER BY ai.id LIMIT 1)`;
 
 function ordering(sort: GallerySort) {
   switch (sort) {
@@ -282,7 +282,7 @@ export async function getArtifactBySlug(
   const imageRows = (
     await database
       .prepare(
-        `SELECT i.id image_id,i.original_url,i.width image_width,i.height image_height,i.dominant_color,i.attribution image_attribution,i.license_identifier,i.license_url,${imageColumns.split('\n').slice(1).join('\n')} FROM artifact_images i WHERE i.artifact_id=? AND i.redistribution_allowed=1 AND i.original_object_key IS NOT NULL ORDER BY i.id`
+        `SELECT i.id image_id,i.original_url,i.width image_width,i.height image_height,i.dominant_color,i.attribution image_attribution,i.license_identifier,i.license_url,${imageColumns.split('\n').slice(1).join('\n')} FROM artifact_images i WHERE i.artifact_id=? AND i.publication_status='published' AND i.redistribution_allowed=1 AND i.original_object_key IS NOT NULL ORDER BY i.id`
       )
       .bind(base.id)
       .all<Row>()

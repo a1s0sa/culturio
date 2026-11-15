@@ -27,6 +27,8 @@
         >
         <div class="menu">
           <p class="identity" title={user.email}>{user.email}</p>
+          {#if user.role === 'moderator'}<a class="moderation-link" href="/moderation">Moderation</a
+            >{/if}
           <button type="button" onclick={signOut}>Sign out</button>
         </div>
       </details>
@@ -109,6 +111,10 @@
     background: transparent;
     text-align: left;
     cursor: pointer;
+  }
+  .moderation-link {
+    display: block;
+    padding: 0.65rem;
   }
   .menu button:hover {
     background: #e9e2d8;

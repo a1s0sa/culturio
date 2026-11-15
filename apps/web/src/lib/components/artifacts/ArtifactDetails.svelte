@@ -41,14 +41,14 @@
       <ul class="source-badges" aria-label="Artifact sources">
         {#each artifact.sources as source (source.url)}
           <li>
-            <a href={source.url} rel="external noreferrer"
+            <a href={source.url} target="_blank" rel="external noopener noreferrer"
               >Record · {institutionName(source.institution)}</a
             >
           </li>
         {/each}
         {#each imageSources as source (source.institution)}
           <li>
-            <a href={source.url} rel="external noreferrer"
+            <a href={source.url} target="_blank" rel="external noopener noreferrer"
               >Image · {institutionName(source.institution)}</a
             >
           </li>
@@ -71,7 +71,8 @@
     {#if artifact.sources.length}<section class="sources">
         <h2>Sources &amp; attribution</h2>
         {#each artifact.sources as source (source.url)}<p>
-            <a href={source.url} rel="external noreferrer">{institutionName(source.institution)}</a
+            <a href={source.url} target="_blank" rel="external noopener noreferrer"
+              >{institutionName(source.institution)}</a
             >{#if source.accessionNumber}
               · {source.accessionNumber}{/if}{#if source.attribution}<br /><span
                 >{source.attribution}</span

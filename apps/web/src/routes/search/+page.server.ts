@@ -8,6 +8,6 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
   delete query.cursor;
   query.limit = 24;
   setHeaders({ 'cache-control': 'public, max-age=30, s-maxage=60', 'cache-tag': 'artifacts' });
-  const page = await listArtifacts(env, query);
+  const page = await listArtifacts(env, query, url);
   return { page, query: query.q ?? '' };
 };

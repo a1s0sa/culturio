@@ -24,12 +24,14 @@
     {#if images[active]?.sourceUrl}
       <p class="credit">
         Image credit:
-        <a href={images[active].sourceUrl} rel="external noreferrer">
+        <a href={images[active].sourceUrl} target="_blank" rel="external noopener noreferrer">
           {images[active].attribution ||
             institutionName(images[active].sourceInstitution ?? 'Collection')}
         </a>
         {#if images[active]?.licenseUrl}
-          · <a href={images[active].licenseUrl} rel="external noreferrer">License</a>
+          · <a href={images[active].licenseUrl} target="_blank" rel="external noopener noreferrer"
+            >License</a
+          >
         {/if}
       </p>
     {/if}

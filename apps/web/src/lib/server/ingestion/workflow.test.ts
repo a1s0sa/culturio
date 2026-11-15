@@ -50,7 +50,7 @@ function setup(failPersistOnce = false) {
   };
   const env = {
     DB: db,
-    MEDIA: {
+    UNPUBLISHED_MEDIA: {
       async put(key: string, value: unknown) {
         const size =
           typeof value === 'string'
@@ -72,6 +72,7 @@ function setup(failPersistOnce = false) {
         objects.delete(key);
       }
     },
+    MEDIA: { put: vi.fn(), get: vi.fn(), head: vi.fn(), delete: vi.fn() },
     IMAGES: {
       info: vi.fn().mockResolvedValue({
         format: 'image/jpeg',

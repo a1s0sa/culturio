@@ -8,6 +8,7 @@
     "report": "tsx src/cli.ts report",
     "rebuild-search": "tsx src/cli.ts rebuild-search",
     "export": "tsx src/cli.ts export",
+    "media:migrate-visibility": "tsx src/migrate-r2-visibility.ts",
     "check": "tsc --noEmit",
     "lint": "prettier --check src tests",
     "test": "vitest run"

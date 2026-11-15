@@ -9,6 +9,7 @@ import {
   SOURCE_NAMES
 } from '@culturio/shared';
 export * from './auth.js';
+import { user } from './auth.js';
 import {
   check,
   index,
@@ -266,6 +267,27 @@ export const reviewRecords = sqliteTable(
     ...timestamps
   },
   (table) => [index('review_records_status_idx').on(table.status)]
+);
+
+export const artifactPublicationEvents = sqliteTable(
+  'artifact_publication_events',
+  {
+    id: text('id').primaryKey(),
+    artifactId: text('artifact_id')
+      .notNull()
+      .references(() => artifacts.id, { onDelete: 'cascade' }),
+    moderatorId: text('moderator_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    action: text('action', { enum: ['publish', 'unpublish'] }).notNull(),
+    note: text('note'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`)
+  },
+  (table) => [
+    index('artifact_publication_events_artifact_idx').on(table.artifactId, table.createdAt)
+  ]
 );
 
 export const artifactsRelations = relations(artifacts, ({ many }) => ({

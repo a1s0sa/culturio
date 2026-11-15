@@ -53,7 +53,7 @@ export class IngestionWorkflow extends WorkflowEntrypoint<IngestionEnv, Ingestio
         stepRetries,
         async () => {
           const key = `ingestion/jobs/${job.id}/artifact.json`;
-          if (await this.env.MEDIA.head(key)) return key;
+          if (await this.env.UNPUBLISHED_MEDIA.head(key)) return key;
 
           let artifact: Artifact;
           try {
@@ -82,7 +82,7 @@ export class IngestionWorkflow extends WorkflowEntrypoint<IngestionEnv, Ingestio
             }
             throw error;
           }
-          await this.env.MEDIA.put(key, JSON.stringify(artifact), {
+          await this.env.UNPUBLISHED_MEDIA.put(key, JSON.stringify(artifact), {
             httpMetadata: { contentType: 'application/json' }
           });
           return key;
@@ -107,7 +107,9 @@ export class IngestionWorkflow extends WorkflowEntrypoint<IngestionEnv, Ingestio
         }
       )) as { skipped: boolean; hash: string };
       if (duplicate.skipped) {
-        await step.do('cleanup-duplicate-metadata', async () => this.env.MEDIA.delete(metadataKey));
+        await step.do('cleanup-duplicate-metadata', async () =>
+          this.env.UNPUBLISHED_MEDIA.delete(metadataKey)
+        );
         return { status: 'skipped' };
       }
 
@@ -135,7 +137,7 @@ export class IngestionWorkflow extends WorkflowEntrypoint<IngestionEnv, Ingestio
           null,
           persisted.inserted ? 'inserted' : 'updated'
         );
-        await this.env.MEDIA.delete(metadataKey);
+        await this.env.UNPUBLISHED_MEDIA.delete(metadataKey);
         console.info(
           JSON.stringify({
             event: 'ingestion.job.completed',
@@ -162,7 +164,7 @@ export class IngestionWorkflow extends WorkflowEntrypoint<IngestionEnv, Ingestio
 }
 
 async function readArtifact(env: IngestionEnv, key: string): Promise<Artifact> {
-  const object = await env.MEDIA.get(key);
+  const object = await env.UNPUBLISHED_MEDIA.get(key);
   if (!object) throw new Error(`Workflow metadata object is missing: ${key}`);
   return normalizedArtifactSchema.parse(await object.json());
 }
@@ -234,21 +236,26 @@ async function processImages(
       const prefix = `artifacts/${artifactId}/${hash}`;
       const extension = mimeType === 'image/jpeg' ? 'jpg' : mimeType.slice(6);
       const originalKey = `${prefix}/original.${extension}`;
-      if (!(await env.MEDIA.head(originalKey))) {
-        await env.MEDIA.put(originalKey, bytes, { httpMetadata: { contentType: mimeType } });
+      if (!(await env.UNPUBLISHED_MEDIA.head(originalKey))) {
+        await env.UNPUBLISHED_MEDIA.put(originalKey, bytes, {
+          httpMetadata: { contentType: mimeType }
+        });
       }
       const outputVariants: MediaRef['variants'] = [];
       for (const variant of variants) {
         const objectKey = `${prefix}/${variant.width}.webp`;
-        let object = await env.MEDIA.head(objectKey);
+        let object = await env.UNPUBLISHED_MEDIA.head(objectKey);
         if (!object) {
           const output = await env.IMAGES.input(new Blob([bytes]).stream())
             .transform({ width: variant.width, fit: 'scale-down' })
             .output({ format: 'image/webp' });
           const transformed = await output.response();
           const variantBytes = await transformed.arrayBuffer();
-          object = await env.MEDIA.put(objectKey, variantBytes, {
-            httpMetadata: { contentType: 'image/webp' }
+          object = await env.UNPUBLISHED_MEDIA.put(objectKey, variantBytes, {
+            httpMetadata: {
+              contentType: 'image/webp',
+              cacheControl: 'public, max-age=300, s-maxage=600'
+            }
           });
         }
         const width = Math.min(info.width, variant.width);

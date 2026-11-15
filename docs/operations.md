@@ -2,13 +2,32 @@
 
 ## Cloudflare setup
 
-Create the D1 database and private R2 bucket named by the bindings in `apps/web/wrangler.jsonc`. The SvelteKit app reads Worker bindings from `cloudflare:workers`; local Vite development uses the Wrangler config and its persistent local D1 database. The ingestion process does not use those bindings: it uses a least-privilege Cloudflare token with D1 read/write plus bucket-scoped S3 credentials.
+Create the D1 database and both R2 buckets named by the bindings in `apps/web/wrangler.jsonc`. `MEDIA` (`culturio-media`) is the public asset bucket and must contain only approved, redistributable image variants. `UNPUBLISHED_MEDIA` (`culturio-unpublished`) is private and holds ingestion metadata, originals, and staged variants. R2 custom domains expose the whole attached bucket; prefixes do not create access controls.
 
-Configure `assets.culturio.africa` as an R2 custom domain only after reviewing approved objects. R2's S3 endpoint is not itself a CDN. Serve approved content with correct `Content-Type`; object keys are content-addressed and uploaded with `public, max-age=31536000, immutable`. Keep the bucket private to ingestion credentials and expose only the intended delivery path.
+The Worker reads both R2 buckets through bindings. Local requests use the `/media` Worker route and Wrangler's local bucket bindings. In production, published gallery images use the `ASSET_BASE_URL` Worker variable when configured; point it at the custom domain attached to `culturio-media`. Without that variable, published and moderator preview requests use `/media`. Draft previews always use `/media`, which checks moderator access before reading `UNPUBLISHED_MEDIA`.
+
+The standalone ingestion CLI also writes to the private bucket, so set `R2_BUCKET_NAME=culturio-unpublished`. When adopting this separation for an existing bucket, set `R2_PUBLIC_BUCKET_NAME=culturio-media` alongside the existing Cloudflare D1 and R2 credentials in `.env`. Review the dry-run, then run the migration to retain only published variants in the public bucket and move all other objects to the private bucket. It copies and verifies each object before deleting its source:
+
+```sh
+pnpm --filter @culturio/ingestion media:migrate-visibility
+pnpm --filter @culturio/ingestion media:migrate-visibility -- --apply
+```
+
+Do not enable or leave the `culturio-media` custom domain attached until that migration has completed; known unpublished object keys are otherwise publicly fetchable. Afterward, purge the custom domain's Cloudflare cache so previously cached unpublished objects are removed. The `IMAGES` binding transforms image bytes during ingestion; it is not the storage bucket or CDN.
 
 Required secrets are `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_D1_DATABASE_ID`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, and `SMITHSONIAN_API_KEY`. Never expose them through SvelteKit public environment variables.
 
 For local auth, copy `apps/web/.dev.vars.example` to `apps/web/.dev.vars`, set a random `BETTER_AUTH_SECRET` and the local `BETTER_AUTH_URL`, then enter the ZeptoMail agent API key, regional email API URL, and verified sender address. Apply local migrations with `pnpm --filter @culturio/db migrate:local`. In production, set the auth secret and ZeptoMail API key as Wrangler secrets; configure the URL and sender values as Worker vars or secrets.
+
+## Grant moderator access
+
+Create the person's account through the normal sign-in flow and verify the account identity before granting access. Then run this statement against the production D1 database using the Wrangler D1 console or `wrangler d1 execute`:
+
+```sql
+UPDATE `user` SET role = 'moderator' WHERE email = 'moderator@example.org';
+```
+
+New accounts receive the `member` role, and role assignment is server-controlled. To revoke moderation, set the account role back to `member`. Moderator changes and artifact publish/unpublish actions are recorded in D1.
 
 ## Trigger Cloudflare ingestion
 
@@ -52,7 +71,7 @@ run ID after publishing. Processing then happens asynchronously. Check Queue
 depth, Workflow instances, and the D1 `ingestion_jobs` / `ingestion_runs` tables
 to follow progress. Discovery makes live museum API requests.
 
-The image workflow requires the `MEDIA` R2 and `IMAGES` bindings to be enabled
+The image workflow requires the `MEDIA`, `UNPUBLISHED_MEDIA`, and `IMAGES` bindings to be enabled
 in `apps/web/wrangler.jsonc`; restore those bindings before expecting jobs to
 finish image storage and processing.
 
