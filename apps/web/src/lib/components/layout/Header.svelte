@@ -47,6 +47,20 @@
     background: color-mix(in srgb, var(--color-ivory) 92%, transparent);
     backdrop-filter: blur(16px);
   }
+  header::before {
+    display: block;
+    height: 0.3rem;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--color-bronze) 0 0.5rem,
+      var(--color-ivory) 0.5rem 0.8rem,
+      var(--color-muted) 0.8rem 1.3rem,
+      var(--color-line) 1.3rem 1.6rem,
+      var(--color-paper) 1.6rem 1.8rem,
+      var(--color-ivory) 1.8rem 2.2rem
+    );
+    content: '';
+  }
   .bar {
     height: 4.25rem;
     display: flex;
