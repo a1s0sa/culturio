@@ -202,8 +202,8 @@ export async function getArtifacts(
     params.push(query.culture, query.culture);
   }
   if (query.country) {
-    conditions.push('a.origin=?');
-    params.push(query.country);
+    conditions.push('(a.origin=? OR substr(a.origin,1,length(?))=?)');
+    params.push(query.country, `${query.country},`, `${query.country},`);
   }
   if (query.type) {
     conditions.push('a.artifact_type=?');

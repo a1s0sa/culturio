@@ -17,6 +17,7 @@ The database is SQLite on Cloudflare D1. The Drizzle definitions in `packages/db
 - `ingestion_jobs` tracks each discovered external record, its attempts, status, result, and failure reason.
 - `ingestion_discovery_state` persists source-level discovery offsets, the active Met search term cursor, and request timing.
 - `review_records` stores metadata, geography, and rights issues that need a human decision. Run and artifact links are nullable so review history can survive deletion of those records.
+- `artifact_publication_events` records publish/unpublish transitions. Moderator actions link to the Better Auth user; automated publications use `actor_type='automation'` and a null moderator ID.
 
 ## Authentication and search
 

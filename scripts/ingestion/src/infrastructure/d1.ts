@@ -1,4 +1,4 @@
-import { HttpError, retryAfterMilliseconds, withRetry } from './retry.js';
+import { HttpError, retryAfterMilliseconds, withRetry } from '@culturio/shared';
 
 export interface D1Statement {
   sql: string;

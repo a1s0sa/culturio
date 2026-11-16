@@ -13,6 +13,7 @@ declare global {
       INGEST_DLQ: Queue<unknown>;
       INGEST_WORKFLOW: Workflow<unknown>;
       INGESTION_TRIGGER_SECRET?: string;
+      INGESTION_AUTOPUBLISH_SECRET?: string;
       SMITHSONIAN_API_KEY?: string;
       ASSET_BASE_URL?: string;
       BETTER_AUTH_SECRET: string;

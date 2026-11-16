@@ -276,9 +276,10 @@ export const artifactPublicationEvents = sqliteTable(
     artifactId: text('artifact_id')
       .notNull()
       .references(() => artifacts.id, { onDelete: 'cascade' }),
-    moderatorId: text('moderator_id')
+    moderatorId: text('moderator_id').references(() => user.id, { onDelete: 'restrict' }),
+    actorType: text('actor_type', { enum: ['moderator', 'automation'] })
       .notNull()
-      .references(() => user.id, { onDelete: 'restrict' }),
+      .default('moderator'),
     action: text('action', { enum: ['publish', 'unpublish'] }).notNull(),
     note: text('note'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })

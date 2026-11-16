@@ -1,4 +1,5 @@
 import type { IngestionEnv, IngestionJob } from './types.js';
+import { markIngestionJob } from './status.js';
 
 export async function consumeIngestionQueue(batch: MessageBatch<unknown>, env: IngestionEnv) {
   let started = 0;
@@ -49,6 +50,38 @@ export async function consumeIngestionQueue(batch: MessageBatch<unknown>, env: I
       retried
     })
   );
+}
+
+export async function consumeIngestionDlq(batch: MessageBatch<unknown>, env: IngestionEnv) {
+  for (const message of batch.messages) {
+    const job = parseIngestionJob(message.body);
+    if (!job) {
+      console.error(JSON.stringify({ event: 'ingestion.dlq.invalid', messageId: message.id }));
+      message.ack();
+      continue;
+    }
+    try {
+      await markIngestionJob(
+        env,
+        job,
+        'failed',
+        'Queue retries exhausted before Workflow start.',
+        null,
+        true
+      );
+      console.error(JSON.stringify({ event: 'ingestion.dlq.job_failed', jobId: job.id }));
+      message.ack();
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'ingestion.dlq.persistence_failed',
+          jobId: job.id,
+          error: String(error)
+        })
+      );
+      message.retry();
+    }
+  }
 }
 
 function parseIngestionJob(value: unknown): IngestionJob | null {

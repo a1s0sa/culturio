@@ -149,7 +149,7 @@ export async function publishArtifact(
   db: D1Database,
   env: Pick<Cloudflare.Env, 'MEDIA' | 'UNPUBLISHED_MEDIA'>,
   artifactId: string,
-  moderatorId: string,
+  actor: { type: 'moderator'; id: string } | { type: 'automation' },
   action: 'publish' | 'unpublish',
   note: string | null
 ) {
@@ -197,10 +197,18 @@ export async function publishArtifact(
       .bind(now, artifactId);
     const audit = db
       .prepare(
-        `INSERT INTO artifact_publication_events(id,artifact_id,moderator_id,action,note,created_at)
-         SELECT ?,?,?,?, ?,? WHERE changes()=1`
+        `INSERT INTO artifact_publication_events(id,artifact_id,moderator_id,actor_type,action,note,created_at)
+         SELECT ?,?,?,?,?,?,? WHERE changes()=1`
       )
-      .bind(id, artifactId, moderatorId, action, note, now);
+      .bind(
+        id,
+        artifactId,
+        actor.type === 'moderator' ? actor.id : null,
+        actor.type,
+        action,
+        note,
+        now
+      );
     const images = db
       .prepare(
         `UPDATE artifact_images SET publication_status='published',updated_at=?
@@ -258,10 +266,18 @@ export async function publishArtifact(
     .bind(now, artifactId);
   const audit = db
     .prepare(
-      `INSERT INTO artifact_publication_events(id,artifact_id,moderator_id,action,note,created_at)
-       SELECT ?,?,?,?, ?,? WHERE changes()=1`
+      `INSERT INTO artifact_publication_events(id,artifact_id,moderator_id,actor_type,action,note,created_at)
+       SELECT ?,?,?,?,?,?,? WHERE changes()=1`
     )
-    .bind(id, artifactId, moderatorId, action, note, now);
+    .bind(
+      id,
+      artifactId,
+      actor.type === 'moderator' ? actor.id : null,
+      actor.type,
+      action,
+      note,
+      now
+    );
   const images = db
     .prepare(
       `UPDATE artifact_images SET publication_status='draft',updated_at=?

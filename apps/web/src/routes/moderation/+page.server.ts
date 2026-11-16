@@ -22,7 +22,7 @@ export const actions: Actions = {
       env.DB,
       env,
       artifactId,
-      moderator.id,
+      { type: 'moderator', id: moderator.id },
       'publish',
       typeof note === 'string' && note.trim() ? note.trim().slice(0, 1000) : null
     );
@@ -39,7 +39,7 @@ export const actions: Actions = {
       env.DB,
       env,
       artifactId,
-      moderator.id,
+      { type: 'moderator', id: moderator.id },
       'unpublish',
       typeof note === 'string' && note.trim() ? note.trim().slice(0, 1000) : null
     );
