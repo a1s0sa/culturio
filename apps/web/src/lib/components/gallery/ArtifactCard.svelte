@@ -1,15 +1,58 @@
 <script lang="ts">
+  import { goto, replaceState } from '$app/navigation';
+  import { page } from '$app/state';
+  import { tick } from 'svelte';
   import type { ArtifactCardView } from '@culturio/db';
   let {
     artifact,
     eager = false,
-    onopen
+    onopen,
+    transitionSource = 'related'
   }: {
     artifact: ArtifactCardView;
     eager?: boolean;
-    onopen?: (event: MouseEvent, artifact: ArtifactCardView) => void;
+    onopen?: (
+      event: MouseEvent,
+      artifact: ArtifactCardView,
+      state: App.PageState
+    ) => void | Promise<void>;
+    transitionSource?: NonNullable<App.PageState['transitionSource']>;
   } = $props();
   let loaded = $state(false);
+  let transitionActive = $derived(
+    page.state.transitionArtifactId === artifact.id &&
+      page.state.transitionSource === transitionSource
+  );
+
+  async function open(event: MouseEvent) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+      return;
+
+    event.preventDefault();
+    const returnTo = `${page.url.pathname}${page.url.search}${page.url.hash}`;
+    const returnLabel =
+      page.url.pathname === '/'
+        ? 'Home'
+        : page.url.pathname.startsWith('/search')
+          ? 'Search'
+          : page.url.pathname.startsWith('/gallery')
+            ? 'Gallery'
+            : 'Previous page';
+    const state: App.PageState = {
+      ...page.state,
+      returnTo,
+      returnLabel,
+      transitionArtifactId: artifact.id,
+      transitionSource
+    };
+    replaceState(page.url.href, state);
+    await tick();
+    if (onopen) {
+      await onopen(event, artifact, state);
+      return;
+    }
+    await goto(`/artifacts/${artifact.slug}`, { state });
+  }
 </script>
 
 <article
@@ -19,12 +62,16 @@
   <a
     id={`artifact-${artifact.id}`}
     href={`/artifacts/${artifact.slug}`}
-    onclick={(event) => onopen?.(event, artifact)}
+    onclick={open}
     aria-label={`View ${artifact.title}`}
   >
     <div
       class="image"
       style:background={artifact.image?.dominantColor ?? '#d8cabb'}
+      style:view-transition-name={transitionActive && page.state.modalSlug !== artifact.slug
+        ? `image-${artifact.id}`
+        : undefined}
+      style:contain={transitionActive ? 'layout' : undefined}
       style:aspect-ratio={artifact.image
         ? `${artifact.image.width}/${artifact.image.height}`
         : '4/5'}

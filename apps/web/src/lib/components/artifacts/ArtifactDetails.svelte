@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import type { ArtifactDetailView } from '@culturio/db';
   import ArtifactImages from './ArtifactImages.svelte';
   import RelatedArtifacts from './RelatedArtifacts.svelte';
@@ -33,7 +34,15 @@
 </script>
 
 <article class={{ compact }}>
-  <div class="visual"><ArtifactImages images={artifact.images} title={artifact.title} /></div>
+  <div
+    class="visual"
+    style:view-transition-name={page.state.transitionArtifactId === artifact.id
+      ? `image-${artifact.id}`
+      : undefined}
+    style:contain={page.state.transitionArtifactId === artifact.id ? 'layout' : undefined}
+  >
+    <ArtifactImages images={artifact.images} title={artifact.title} />
+  </div>
   <div class="content">
     <p class="eyebrow">{artifact.artifactType ?? 'Historical artifact'}</p>
     <h1 class="editorial-title">{artifact.title}</h1>

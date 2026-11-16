@@ -71,13 +71,20 @@
       if (id === request) loading = false;
     }
   }
-  function open(event: MouseEvent, artifact: ArtifactCardView) {
-    if (!matchMedia('(min-width: 801px)').matches) return;
-    event.preventDefault();
-    goto(`/artifacts/${artifact.slug}`, {
+  async function open(_event: MouseEvent, artifact: ArtifactCardView, state: App.PageState) {
+    if (!matchMedia('(min-width: 801px)').matches) {
+      await goto(`/artifacts/${artifact.slug}`, { state });
+      return;
+    }
+    await goto(`/artifacts/${artifact.slug}`, {
       shallow: true,
       reset: false,
-      state: { modalSlug: artifact.slug, returnFocusId: `artifact-${artifact.id}` }
+      state: {
+        ...state,
+        modalSlug: artifact.slug,
+        returnFocusId: `artifact-${artifact.id}`,
+        modalPreview: artifact
+      }
     });
   }
   onMount(() => {
@@ -126,7 +133,9 @@
   <p class="count" aria-live="polite">
     {items.length ? `${items.length} artifacts shown` : 'No artifacts found'}
   </p>
-  {#if items.length}<MasonryGrid {items} onopen={open} />{:else}<section class="empty">
+  {#if items.length}<MasonryGrid {items} onopen={open} transitionSource="gallery" />{:else}<section
+      class="empty"
+    >
       <h2 class="editorial-title">The archive is quiet here.</h2>
       <p>
         {data.query.q
@@ -142,6 +151,7 @@
 {#if page.state.modalSlug}<ArtifactModal
     slug={page.state.modalSlug}
     returnFocusId={page.state.returnFocusId}
+    preview={page.state.modalPreview}
   />{/if}
 
 <style>

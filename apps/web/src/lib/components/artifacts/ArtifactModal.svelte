@@ -1,14 +1,21 @@
 <script lang="ts">
-  import { fade } from 'svelte/transition';
   import { goto } from '$app/navigation';
-  import { tick } from 'svelte';
-  import type { ArtifactDetailView } from '@culturio/db';
+  import { page } from '$app/state';
+  import { onMount } from 'svelte';
+  import type { ArtifactCardView, ArtifactDetailView } from '@culturio/db';
   import ArtifactDetails from './ArtifactDetails.svelte';
-  let { slug, returnFocusId }: { slug: string; returnFocusId?: string } = $props();
+  let {
+    slug,
+    returnFocusId,
+    preview
+  }: { slug: string; returnFocusId?: string; preview?: ArtifactCardView } = $props();
   let dialog: HTMLDialogElement;
   let artifact = $state<ArtifactDetailView | null>(null);
   let loading = $state(true);
   let failed = $state(false);
+  onMount(() => {
+    dialog.showModal();
+  });
   $effect(() => {
     const controller = new AbortController();
     loading = true;
@@ -18,11 +25,9 @@
         if (!response.ok) throw new Error();
         return response.json() as Promise<ArtifactDetailView>;
       })
-      .then(async (value) => {
+      .then((value) => {
         artifact = value;
         loading = false;
-        await tick();
-        dialog?.showModal();
       })
       .catch((error) => {
         if (error.name !== 'AbortError') {
@@ -36,33 +41,56 @@
     history.back();
     setTimeout(() => document.getElementById(returnFocusId ?? '')?.focus(), 0);
   }
+  function openCanonical(event: MouseEvent) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+      return;
+    event.preventDefault();
+    void goto(`/artifacts/${slug}`, {
+      state: {
+        ...page.state,
+        modalSlug: undefined,
+        returnFocusId: undefined,
+        modalPreview: undefined
+      }
+    });
+  }
 </script>
 
 <dialog
   bind:this={dialog}
-  out:fade={{ duration: 180 }}
-  onclose={close}
+  oncancel={(event) => {
+    event.preventDefault();
+    close();
+  }}
   aria-label={artifact ? artifact.title : 'Artifact details'}
 >
-  <button
-    class="close"
-    type="button"
-    onclick={() => dialog.close()}
-    aria-label="Close artifact details">×</button
-  >
+  <button class="close" type="button" onclick={close} aria-label="Close artifact details">×</button>
   <div class="body">
-    {#if loading}<p role="status">Loading artifact…</p>{:else if failed}<div>
+    {#if loading}<div class="loading" role="status" aria-label="Loading artifact details">
+        {#if preview?.image}<div
+            class="loading-image"
+            style:background={preview.image.dominantColor}
+            style:view-transition-name={page.state.transitionArtifactId === preview.id
+              ? `image-${preview.id}`
+              : undefined}
+            style:contain={page.state.transitionArtifactId === preview.id ? 'layout' : undefined}
+          >
+            <img
+              src={preview.image.src}
+              alt=""
+              width={preview.image.width}
+              height={preview.image.height}
+            />
+          </div>{:else}<span class="loading-image"></span>{/if}
+        <span class="loading-copy">
+          <i></i><i></i><i></i><i></i><i></i>
+        </span>
+      </div>{:else if failed}<div>
         <p>We could not load this artifact.</p>
-        <a href={`/artifacts/${slug}`}>Open its page</a>
+        <a href={`/artifacts/${slug}`} onclick={openCanonical}>Open its page</a>
       </div>{:else if artifact}<ArtifactDetails {artifact} compact />
       <p class="canonical">
-        <a
-          href={`/artifacts/${slug}`}
-          onclick={(event) => {
-            event.preventDefault();
-            goto(`/artifacts/${slug}`);
-          }}>Open canonical artifact page →</a
-        >
+        <a href={`/artifacts/${slug}`} onclick={openCanonical}>Open canonical artifact page →</a>
       </p>{/if}
   </div>
 </dialog>
@@ -71,6 +99,7 @@
   dialog {
     width: min(94vw, 88rem);
     max-height: 92vh;
+    min-height: min(60vh, 38rem);
     border: 0;
     border-radius: 0.65rem;
     padding: 0;
@@ -115,6 +144,62 @@
     overflow: auto;
     max-height: 92vh;
   }
+  .loading {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(15rem, 0.85fr);
+    gap: clamp(1.5rem, 4vw, 3rem);
+    min-height: min(60vh, 38rem);
+  }
+  .loading-image,
+  .loading-copy i {
+    display: block;
+    border-radius: 0.35rem;
+    background: #e8dfd2;
+    animation: loading-pulse 1.4s ease-in-out infinite alternate;
+  }
+  .loading-image {
+    display: grid;
+    width: 100%;
+    min-height: min(55vh, 34rem);
+    place-items: center;
+    overflow: hidden;
+  }
+  .loading-image img {
+    display: block;
+    width: 100%;
+    max-height: min(55vh, 34rem);
+    object-fit: contain;
+  }
+  .loading-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding-top: 1rem;
+  }
+  .loading-copy i {
+    height: 0.85rem;
+  }
+  .loading-copy i:first-child {
+    width: 35%;
+    height: 0.55rem;
+    margin-bottom: 0.7rem;
+  }
+  .loading-copy i:nth-child(2) {
+    width: 78%;
+    height: 3rem;
+    margin-bottom: 0.6rem;
+  }
+  .loading-copy i:nth-child(4) {
+    width: 86%;
+  }
+  .loading-copy i:nth-child(5) {
+    width: 58%;
+  }
+  @keyframes loading-pulse {
+    to {
+      opacity: 0.55;
+    }
+  }
   .close {
     position: sticky;
     z-index: 3;
@@ -141,6 +226,12 @@
   @media (max-width: 800px) {
     dialog {
       display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .loading-image,
+    .loading-copy i {
+      animation: none;
     }
   }
 </style>

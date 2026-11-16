@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { goto, replaceState } from '$app/navigation';
+  import { page } from '$app/state';
+  import { tick } from 'svelte';
   import MasonryGrid from '$lib/components/gallery/MasonryGrid.svelte';
   import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
   import { revealOnScroll } from '$lib/actions/reveal-on-scroll';
@@ -6,6 +9,7 @@
   let { data } = $props();
   let featuredTrack = $state<HTMLDivElement>();
   let featuredIndex = $state(0);
+  let featuredTransitionActive = $derived(page.state.transitionSource === 'home-featured');
   let jsonLd = $derived(
     serializeJsonLd({
       '@context': 'https://schema.org',
@@ -46,6 +50,23 @@
     if (!firstCard) return;
     const gap = Number.parseFloat(getComputedStyle(featuredTrack).columnGap) || 0;
     featuredIndex = Math.round(featuredTrack.scrollLeft / (firstCard.offsetWidth + gap));
+  }
+
+  async function openFeatured(event: MouseEvent, artifact: (typeof data.featured)[number]) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+      return;
+    event.preventDefault();
+    const returnTo = `${page.url.pathname}${page.url.search}${page.url.hash}`;
+    const state: App.PageState = {
+      ...page.state,
+      returnTo,
+      returnLabel: 'Home',
+      transitionArtifactId: artifact.id,
+      transitionSource: 'home-featured'
+    };
+    replaceState(page.url.href, state);
+    await tick();
+    await goto(`/artifacts/${artifact.slug}`, { state });
   }
 </script>
 
@@ -121,10 +142,21 @@
         <ul class="feature-track">
           {#each data.featured as artifact, index (artifact.id)}
             <li class="feature-card" use:revealOnScroll={index % 4}>
-              <a href={`/artifacts/${artifact.slug}`}>
+              <a
+                href={`/artifacts/${artifact.slug}`}
+                onclick={(event) => openFeatured(event, artifact)}
+              >
                 <div
                   class="feature-image"
                   style:background={artifact.image?.dominantColor ?? '#d8cabb'}
+                  style:view-transition-name={featuredTransitionActive &&
+                  page.state.transitionArtifactId === artifact.id
+                    ? `image-${artifact.id}`
+                    : undefined}
+                  style:contain={featuredTransitionActive &&
+                  page.state.transitionArtifactId === artifact.id
+                    ? 'layout'
+                    : undefined}
                 >
                   {#if artifact.image}
                     <img
@@ -156,7 +188,10 @@
       </div>
       <a href="/gallery">View the full archive →</a>
     </div>
-    {#if data.preview.length}<MasonryGrid items={data.preview} />{:else}<div class="empty">
+    {#if data.preview.length}<MasonryGrid
+        items={data.preview}
+        transitionSource="home-preview"
+      />{:else}<div class="empty">
         <p class="editorial-title">The first reviewed artifacts will appear here.</p>
         <a href="/about">Learn how Culturio preserves source integrity</a>
       </div>{/if}

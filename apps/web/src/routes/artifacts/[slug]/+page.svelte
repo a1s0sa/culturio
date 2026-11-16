@@ -1,9 +1,18 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import ArtifactDetails from '$lib/components/artifacts/ArtifactDetails.svelte';
   import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
   import { serializeJsonLd } from '$lib/seo/json-ld';
   let { data } = $props();
   let a = $derived(data.artifact);
+  function back(event: MouseEvent) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+      return;
+    event.preventDefault();
+    if (page.state.returnTo) history.back();
+    else void goto('/gallery');
+  }
   let json = $derived(
     serializeJsonLd({
       '@context': 'https://schema.org',
@@ -75,7 +84,9 @@
 />
 <main class="page-shell detail">
   <nav aria-label="Breadcrumb">
-    <a href="/gallery">Gallery</a><span> / </span><span aria-current="page">{a.title}</span>
+    <a href={page.state.returnTo ?? '/gallery'} onclick={back}
+      >← Back to {page.state.returnLabel ?? 'Gallery'}</a
+    ><span> / </span><span aria-current="page">{a.title}</span>
   </nav>
   <ArtifactDetails artifact={a} />
 </main>

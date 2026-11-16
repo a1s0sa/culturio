@@ -5,10 +5,16 @@
   import { revealOnScroll } from '$lib/actions/reveal-on-scroll';
   let {
     items,
-    onopen
+    onopen,
+    transitionSource = 'gallery'
   }: {
     items: ArtifactCardView[];
-    onopen?: (event: MouseEvent, artifact: ArtifactCardView) => void;
+    onopen?: (
+      event: MouseEvent,
+      artifact: ArtifactCardView,
+      state: App.PageState
+    ) => void | Promise<void>;
+    transitionSource?: NonNullable<App.PageState['transitionSource']>;
   } = $props();
   let grid: HTMLElement;
   function layout() {
@@ -38,7 +44,7 @@
       use:revealOnScroll={index % 6}
       data-ratio={artifact.image ? artifact.image.height / artifact.image.width : 1.15}
     >
-      <ArtifactCard {artifact} eager={index < 2} {onopen} />
+      <ArtifactCard {artifact} eager={index < 2} {onopen} {transitionSource} />
     </div>{/each}
 </div>
 

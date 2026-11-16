@@ -8,7 +8,7 @@
     <p class="eyebrow">Continue exploring</p>
     <h2 class="editorial-title">Related artifacts</h2>
     <div>
-      {#each items as artifact}<ArtifactCard {artifact} />{/each}
+      {#each items as artifact}<ArtifactCard {artifact} transitionSource="related" />{/each}
     </div>
   </section>{/if}
 

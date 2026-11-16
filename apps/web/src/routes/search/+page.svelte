@@ -142,7 +142,7 @@
     </div>
 
     {#if items.length}
-      <MasonryGrid {items} />
+      <MasonryGrid {items} transitionSource="search" />
       <div bind:this={sentinel} class="sentinel" aria-hidden="true"></div>
       <LoadMore onclick={loadMore} {loading} disabled={!nextCursor} />
       <p class="sr-only" aria-live="polite">{message}</p>

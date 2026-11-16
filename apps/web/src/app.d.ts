@@ -1,5 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
+import type { ArtifactCardView } from '@culturio/db';
+
 declare global {
   namespace Cloudflare {
     interface Env {
@@ -25,6 +27,11 @@ declare global {
     interface PageState {
       modalSlug?: string;
       returnFocusId?: string;
+      modalPreview?: ArtifactCardView;
+      returnTo?: string;
+      returnLabel?: string;
+      transitionArtifactId?: string;
+      transitionSource?: 'home-featured' | 'home-preview' | 'gallery' | 'search' | 'related';
     }
   }
 }
