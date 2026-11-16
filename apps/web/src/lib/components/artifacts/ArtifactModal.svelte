@@ -4,6 +4,7 @@
   import { onMount } from 'svelte';
   import type { ArtifactCardView, ArtifactDetailView } from '@culturio/db';
   import ArtifactDetails from './ArtifactDetails.svelte';
+  import IdiaMaskLoader from './IdiaMaskLoader.svelte';
   let {
     slug,
     returnFocusId,
@@ -82,9 +83,10 @@
               height={preview.image.height}
             />
           </div>{:else}<span class="loading-image"></span>{/if}
-        <span class="loading-copy">
-          <i></i><i></i><i></i><i></i><i></i>
-        </span>
+        <div class="loading-copy">
+          <div class="loading-indicator"><IdiaMaskLoader /><span>Loading archive record</span></div>
+          <i></i><i></i><i></i><i></i>
+        </div>
       </div>{:else if failed}<div>
         <p>We could not load this artifact.</p>
         <a href={`/artifacts/${slug}`} onclick={openCanonical}>Open its page</a>
@@ -155,7 +157,6 @@
     display: block;
     border-radius: 0.35rem;
     background: #e8dfd2;
-    animation: loading-pulse 1.4s ease-in-out infinite alternate;
   }
   .loading-image {
     display: grid;
@@ -176,29 +177,33 @@
     gap: 0.8rem;
     padding-top: 1rem;
   }
+  .loading-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 2.6rem;
+    margin-bottom: 0.25rem;
+    color: var(--color-muted);
+    font-size: 0.82rem;
+  }
   .loading-copy i {
     height: 0.85rem;
   }
-  .loading-copy i:first-child {
+  .loading-copy i:nth-of-type(1) {
     width: 35%;
     height: 0.55rem;
     margin-bottom: 0.7rem;
   }
-  .loading-copy i:nth-child(2) {
+  .loading-copy i:nth-of-type(2) {
     width: 78%;
     height: 3rem;
     margin-bottom: 0.6rem;
   }
-  .loading-copy i:nth-child(4) {
+  .loading-copy i:nth-of-type(3) {
     width: 86%;
   }
-  .loading-copy i:nth-child(5) {
+  .loading-copy i:nth-of-type(4) {
     width: 58%;
-  }
-  @keyframes loading-pulse {
-    to {
-      opacity: 0.55;
-    }
   }
   .close {
     position: sticky;
@@ -226,12 +231,6 @@
   @media (max-width: 800px) {
     dialog {
       display: none;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .loading-image,
-    .loading-copy i {
-      animation: none;
     }
   }
 </style>

@@ -20,6 +20,7 @@
   font-family: var(--font-sans);
   background: var(--color-ivory);
   color: var(--color-ink);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 html {
   scrollbar-gutter: stable;
@@ -46,6 +47,18 @@ select {
 }
 :focus-visible {
   outline: 2px solid var(--color-bronze);
+}
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled),
+  a.primary,
+  .sign-in {
+    transition: transform 160ms var(--ease-out);
+  }
+  button:not(:disabled):active:not(:focus-visible),
+  a.primary:active:not(:focus-visible),
+  .sign-in:active:not(:focus-visible) {
+    transform: scale(0.98);
+  }
 }
 ::selection {
   background: #d8b29d;
