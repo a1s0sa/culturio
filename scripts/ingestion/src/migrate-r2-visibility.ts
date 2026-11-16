@@ -6,16 +6,12 @@ import {
   ListObjectsV2Command,
   PutObjectCommand
 } from '@aws-sdk/client-s3';
-import { loadConfig, requireProductionCredentials } from './config.js';
+import { loadConfig, loadRootEnv, requireProductionCredentials } from './config.js';
 import { D1HttpClient } from './infrastructure/d1.js';
 import { createR2Client } from './infrastructure/r2.js';
 
 async function main() {
-  try {
-    process.loadEnvFile('../../.env');
-  } catch (cause) {
-    if ((cause as NodeJS.ErrnoException).code !== 'ENOENT') throw cause;
-  }
+  loadRootEnv();
   const apply = process.argv.includes('--apply');
   const config = loadConfig();
   requireProductionCredentials(config);

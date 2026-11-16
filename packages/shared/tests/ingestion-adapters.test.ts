@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MetAdapter } from '../src/adapters/met.js';
-import { SmithsonianAdapter } from '../src/adapters/smithsonian.js';
+import { MetAdapter, SmithsonianAdapter } from '../src/index.js';
 
 describe('museum normalization', () => {
   it('normalizes a Met BCE object without inventing precision', async () => {

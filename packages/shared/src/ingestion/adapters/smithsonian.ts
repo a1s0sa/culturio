@@ -1,14 +1,10 @@
-import {
-  classifyAfricanGeography,
-  normalizedArtifactSchema,
-  parseHistoricalDate,
-  type DiscoveredRecord,
-  type NormalizedArtifact,
-  type SourceAdapter,
-  type SourceCheckpoint
-} from '@culturio/shared';
+import { classifyAfricanGeography } from '../../constants/geography.js';
+import { normalizedArtifactSchema } from '../../schemas/artifact.js';
+import { parseHistoricalDate } from '../../utils/dates.js';
+import type { NormalizedArtifact } from '../../schemas/artifact.js';
+import type { DiscoveredRecord, SourceAdapter, SourceCheckpoint } from '../../types/ingestion.js';
 import { z } from 'zod';
-import { HttpError, retryAfterMilliseconds, withRetry } from '../infrastructure/retry.js';
+import { HttpError, retryAfterMilliseconds, withRetry } from '../retry.js';
 
 const recordSchema = z
   .object({

@@ -1,5 +1,5 @@
 import { sourceNameSchema, type NormalizedArtifact, type SourceCheckpoint } from '@culturio/shared';
-import { HttpError } from '../../../../../../scripts/ingestion/src/infrastructure/retry.js';
+import { HttpError } from '@culturio/shared';
 import type { IngestionEnv, IngestionJob } from './types.js';
 import { adapterFor, retrieveAndNormalize } from './types.js';
 
@@ -80,47 +80,54 @@ export async function discoverAndQueue(
       if (shouldRefresh && !pendingReview && !recentFailure && !recentActiveJob) {
         const id = await stableId(`${runId}:${source}:${record.externalId}`);
         const job = { id, runId, source, externalId: record.externalId } satisfies IngestionJob;
-        if (source === 'met') {
-          let artifact: NormalizedArtifact;
-          try {
-            artifact = await retrieveAndNormalize(env, source, record.externalId);
-          } catch (error) {
-            const reasonCode = rejectionCode(error);
-            if (!reasonCode) throw error;
-            await recordRejection(env, runId, source, record.externalId, reasonCode, String(error));
-            rejected += 1;
-            if (scanned >= MAX_DISCOVERY_SCAN) {
-              exhausted = false;
-              break;
-            }
-            continue;
+        let artifact: NormalizedArtifact;
+        try {
+          artifact = await retrieveAndNormalize(env, source, record.externalId);
+        } catch (error) {
+          const reasonCode = rejectionCode(error);
+          if (!reasonCode) throw error;
+          await recordRejection(env, runId, source, record.externalId, reasonCode, String(error));
+          rejected += 1;
+          if (scanned >= MAX_DISCOVERY_SCAN) {
+            exhausted = false;
+            break;
           }
-          if (artifact.geographyConfidence !== 'confirmed' || artifact.images.length === 0) {
-            const reasonCode =
-              artifact.geographyConfidence === 'ambiguous' ? 'ambiguous_geography' : 'no_images';
-            await recordRejection(
-              env,
-              runId,
-              source,
-              record.externalId,
-              reasonCode,
-              reasonCode === 'no_images'
-                ? 'Source metadata record has no images'
-                : 'Source metadata does not clearly establish African origin'
-            );
-            rejected += 1;
-            if (scanned >= MAX_DISCOVERY_SCAN) {
-              exhausted = false;
-              break;
-            }
-            continue;
-          }
-          const metadataKey = `ingestion/jobs/${id}/artifact.json`;
-          await env.UNPUBLISHED_MEDIA.put(metadataKey, JSON.stringify(artifact), {
-            httpMetadata: { contentType: 'application/json' }
-          });
-          metadataKeys.push(metadataKey);
+          continue;
         }
+        const hasRedistributableImage = artifact.images.some(
+          (image) => image.license.redistributionAllowed
+        );
+        if (artifact.geographyConfidence !== 'confirmed' || !hasRedistributableImage) {
+          const reasonCode =
+            artifact.geographyConfidence === 'ambiguous'
+              ? 'ambiguous_geography'
+              : artifact.images.length === 0
+                ? 'no_images'
+                : 'no_redistributable_images';
+          await recordRejection(
+            env,
+            runId,
+            source,
+            record.externalId,
+            reasonCode,
+            reasonCode === 'ambiguous_geography'
+              ? 'Source metadata does not clearly establish African origin'
+              : reasonCode === 'no_images'
+                ? 'Source metadata record has no images'
+                : 'Source metadata has no redistributable images'
+          );
+          rejected += 1;
+          if (scanned >= MAX_DISCOVERY_SCAN) {
+            exhausted = false;
+            break;
+          }
+          continue;
+        }
+        const metadataKey = `ingestion/jobs/${id}/artifact.json`;
+        await env.UNPUBLISHED_MEDIA.put(metadataKey, JSON.stringify(artifact), {
+          httpMetadata: { contentType: 'application/json' }
+        });
+        metadataKeys.push(metadataKey);
         await env.DB.prepare(
           `INSERT INTO ingestion_jobs (id,run_id,source,external_id,status,created_at,updated_at)
          VALUES (?, ?, ?, ?, 'queued', ?, ?) ON CONFLICT(run_id,source,external_id) DO NOTHING`

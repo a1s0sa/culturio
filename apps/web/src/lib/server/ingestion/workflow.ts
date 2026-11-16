@@ -8,7 +8,8 @@ import {
 import { NonRetryableError } from 'cloudflare:workflows';
 import type { IngestionEnv, IngestionJob } from './types.js';
 import { retrieveAndNormalize } from './types.js';
-import { HttpError } from '../../../../../../scripts/ingestion/src/infrastructure/retry.js';
+import { markIngestionJob } from './status.js';
+import { HttpError } from '@culturio/shared';
 
 const stepRetries = {
   retries: { limit: 4, delay: '10 seconds' as const, backoff: 'exponential' as const }
@@ -100,7 +101,7 @@ export class IngestionWorkflow extends WorkflowEntrypoint<IngestionEnv, Ingestio
             .bind(artifact.source, artifact.externalId)
             .first<{ record_hash: string }>();
           if (existing?.record_hash === hash) {
-            await markJob(this.env, job, 'skipped');
+            await markIngestionJob(this.env, job, 'skipped');
             return { skipped: true, hash };
           }
           return { skipped: false, hash };
@@ -130,10 +131,10 @@ export class IngestionWorkflow extends WorkflowEntrypoint<IngestionEnv, Ingestio
       )) as Awaited<ReturnType<typeof persistArtifact>>;
 
       await step.do('mark-ingestion-job-completed', async () => {
-        await markJob(
+        await markIngestionJob(
           this.env,
           job,
-          persisted.status,
+          persisted.status as 'review' | 'completed',
           null,
           persisted.inserted ? 'inserted' : 'updated'
         );
@@ -148,7 +149,7 @@ export class IngestionWorkflow extends WorkflowEntrypoint<IngestionEnv, Ingestio
       });
       return { status: 'completed', artifactId: persisted.artifactId };
     } catch (error) {
-      await markJob(
+      await markIngestionJob(
         this.env,
         job,
         'failed',
@@ -502,56 +503,6 @@ async function persistArtifact(
         ? 'review'
         : 'completed'
   };
-}
-
-async function markJob(
-  env: IngestionEnv,
-  job: IngestionJob,
-  status: string,
-  failureReason: string | null = null,
-  result: 'inserted' | 'updated' | 'skipped' | null = null
-) {
-  const now = Date.now();
-  await env.DB.batch([
-    env.DB.prepare(
-      'UPDATE ingestion_jobs SET status=?,result=?,failure_reason=?,completed_at=?,updated_at=? WHERE id=?'
-    ).bind(
-      status,
-      result,
-      failureReason,
-      ['completed', 'skipped', 'review', 'failed'].includes(status) ? now : null,
-      now,
-      job.id
-    ),
-    env.DB.prepare(
-      `UPDATE ingestion_runs SET
-        processed=(SELECT COUNT(*) FROM ingestion_jobs WHERE run_id=? AND status IN ('completed','skipped','review','failed')),
-        inserted=(SELECT COUNT(*) FROM ingestion_jobs WHERE run_id=? AND result='inserted'),
-        updated=(SELECT COUNT(*) FROM ingestion_jobs WHERE run_id=? AND result='updated'),
-        skipped=(SELECT COUNT(*) FROM ingestion_jobs WHERE run_id=? AND status='skipped'),
-        errors=(SELECT COUNT(*) FROM ingestion_jobs WHERE run_id=? AND status='failed'),
-        status=CASE
-          WHEN (SELECT COUNT(*) FROM ingestion_jobs WHERE run_id=? AND status IN ('completed','skipped','review','failed')) < discovered THEN 'running'
-          WHEN (SELECT COUNT(*) FROM ingestion_jobs WHERE run_id=? AND status='failed') = (SELECT COUNT(*) FROM ingestion_jobs WHERE run_id=? AND status IN ('completed','skipped','review','failed')) THEN 'failed'
-          ELSE 'completed'
-        END,
-        ended_at=CASE WHEN (SELECT COUNT(*) FROM ingestion_jobs WHERE run_id=? AND status IN ('completed','skipped','review','failed')) >= discovered THEN ? ELSE NULL END,
-        updated_at=? WHERE id=?`
-    ).bind(
-      job.runId,
-      job.runId,
-      job.runId,
-      job.runId,
-      job.runId,
-      job.runId,
-      job.runId,
-      job.runId,
-      job.runId,
-      now,
-      now,
-      job.runId
-    )
-  ]);
 }
 
 async function createReview(env: IngestionEnv, job: IngestionJob, reason: string, code: string) {

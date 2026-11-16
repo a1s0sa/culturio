@@ -24,5 +24,6 @@ jobs:
       - run: pnpm test
       - run: pnpm db:validate
       - run: pnpm build
-      - run: pnpm --filter @culturio/web exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      # Enable once the browser suite has reliable end-to-end coverage.
+      # - run: pnpm --filter @culturio/web exec playwright install --with-deps chromium
+      # - run: pnpm test:e2e

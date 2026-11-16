@@ -6,7 +6,7 @@ Create the D1 database and both R2 buckets named by the bindings in `apps/web/wr
 
 The Worker reads both R2 buckets through bindings. Local requests use the `/media` Worker route and Wrangler's local bucket bindings. In production, published gallery images use the `ASSET_BASE_URL` Worker variable when configured; point it at the custom domain attached to `culturio-media`. Without that variable, published and moderator preview requests use `/media`. Draft previews always use `/media`, which checks moderator access before reading `UNPUBLISHED_MEDIA`.
 
-The standalone ingestion CLI also writes to the private bucket, so set `R2_BUCKET_NAME=culturio-unpublished`. When adopting this separation for an existing bucket, set `R2_PUBLIC_BUCKET_NAME=culturio-media` alongside the existing Cloudflare D1 and R2 credentials in `.env`. Review the dry-run, then run the migration to retain only published variants in the public bucket and move all other objects to the private bucket. It copies and verifies each object before deleting its source:
+The one-time bucket visibility migration uses the R2 S3 API. Set `R2_BUCKET_NAME=culturio-unpublished` and `R2_PUBLIC_BUCKET_NAME=culturio-media` alongside Cloudflare D1 and R2 credentials in your shell. Review the dry-run, then run the migration to retain only published variants in the public bucket and move all other objects to the private bucket. It copies and verifies each object before deleting its source:
 
 ```sh
 pnpm --filter @culturio/ingestion media:migrate-visibility
@@ -15,7 +15,7 @@ pnpm --filter @culturio/ingestion media:migrate-visibility -- --apply
 
 Do not enable or leave the `culturio-media` custom domain attached until that migration has completed; known unpublished object keys are otherwise publicly fetchable. Afterward, purge the custom domain's Cloudflare cache so previously cached unpublished objects are removed. The `IMAGES` binding transforms image bytes during ingestion; it is not the storage bucket or CDN.
 
-Required secrets are `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_D1_DATABASE_ID`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, and `SMITHSONIAN_API_KEY`. Never expose them through SvelteKit public environment variables.
+The GitHub remote-ingestion workflow needs the `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `INGESTION_TRIGGER_SECRET`, and `INGESTION_AUTOPUBLISH_SECRET` repository secrets, plus the `CULTURIO_WORKER_URL` repository variable. The Cloudflare Worker itself needs `SMITHSONIAN_API_KEY`, `INGESTION_TRIGGER_SECRET`, and `INGESTION_AUTOPUBLISH_SECRET` as Wrangler secrets. Never put these values in public SvelteKit variables.
 
 For local auth, copy `apps/web/.dev.vars.example` to `apps/web/.dev.vars`, set a random `BETTER_AUTH_SECRET` and the local `BETTER_AUTH_URL`, then enter the ZeptoMail agent API key, regional email API URL, and verified sender address. Apply local migrations with `pnpm --filter @culturio/db migrate:local`. In production, set the auth secret and ZeptoMail API key as Wrangler secrets; configure the URL and sender values as Worker vars or secrets.
 
@@ -42,10 +42,11 @@ pnpm --dir apps/web exec wrangler queues create culturio-ingest-dlq
 pnpm --filter @culturio/web deploy
 ```
 
-Set the bearer token used by the discovery endpoint:
+Set bearer tokens for discovery and automated publication:
 
 ```sh
 pnpm --dir apps/web exec wrangler secret put INGESTION_TRIGGER_SECRET
+pnpm --dir apps/web exec wrangler secret put INGESTION_AUTOPUBLISH_SECRET
 ```
 
 For local runs, put `INGESTION_TRIGGER_SECRET=local-development-token` in
@@ -77,9 +78,9 @@ finish image storage and processing.
 
 ## Recovery
 
-Resume with `pnpm ingest --source met --limit 100 --resume <run-id>`. Deterministic R2 keys make repeated uploads safe; D1 upserts use source identity. Review `review_records` for corrupt images, ambiguous geography, licensing, or per-record failures. A successful upload followed by a failed D1 write is reconciled by retrying the record; the same object key is reused.
+Trigger a new scan with `pnpm ingest --source met --limit 20`; discovery cooldowns and checkpoints prevent immediately repeating the same records. Retry a failed Workflow instance with Wrangler after reviewing its failure reason. Deterministic R2 keys make retries safe; D1 upserts use source identity. Review `review_records` for ambiguous geography, licensing, or source failures.
 
-The ingestion workflow is manual and prevents overlapping production runs. Begin with a dry run, then 10–20 records. Verify D1 rows, variants, licensing, search, repeat-run idempotency, and checkpoint recovery before increasing limits.
+The GitHub remote-ingestion workflow is manually dispatched and serializes production runs. It selects one museum and scans at most 20 records per run. It waits for Workflow completion before publishing eligible records.
 
 ## Deployment
 

@@ -1,0 +1,54 @@
+name: Remote ingestion
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Museum collection to ingest
+        required: true
+        type: choice
+        options:
+          - met
+          - smithsonian
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remote-ingestion
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    # For an organization-owned repository, set INGESTION_OWNER_LOGINS to a
+    # comma-separated allowlist of organization owner usernames in repository variables.
+    if: >-
+      github.actor == github.repository_owner ||
+      contains(format(',{0},', vars.INGESTION_OWNER_LOGINS), format(',{0},', github.actor))
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Discover, wait for Cloudflare jobs, and publish eligible records
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: 4.157.0
+          packageManager: pnpm
+          workingDirectory: apps/web
+          preCommands: node ../../scripts/ingestion/remote-workflow.mjs
+          command: whoami
+        env:
+          CULTURIO_WORKER_URL: ${{ vars.CULTURIO_WORKER_URL }}
+          INGESTION_SOURCE: ${{ inputs.source }}
+          INGESTION_TRIGGER_SECRET: ${{ secrets.INGESTION_TRIGGER_SECRET }}
+          INGESTION_AUTOPUBLISH_SECRET: ${{ secrets.INGESTION_AUTOPUBLISH_SECRET }}

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import { publishArtifact } from './moderation.js';
+import { publishEligibleRunArtifacts } from './ingestion/publish-run.js';
 
 function d1(database: DatabaseSync): D1Database {
   return {
@@ -79,7 +80,8 @@ function fixture() {
     '0002_ingestion_jobs.sql',
     '0003_enum_validation.sql',
     '0004_met_discovery_cursor.sql',
-    '0005_artifact_publication.sql'
+    '0005_artifact_publication.sql',
+    '0006_automated_publication.sql'
   ]) {
     database.exec(
       readFileSync(
@@ -135,7 +137,7 @@ describe('artifact moderation transitions', () => {
       db,
       env,
       'artifact',
-      'moderator',
+      { type: 'moderator', id: 'moderator' },
       'publish',
       'Reviewed source and rights'
     );
@@ -155,7 +157,14 @@ describe('artifact moderation transitions', () => {
       note: 'Reviewed source and rights'
     });
 
-    await publishArtifact(db, env, 'artifact', 'moderator', 'unpublish', null);
+    await publishArtifact(
+      db,
+      env,
+      'artifact',
+      { type: 'moderator', id: 'moderator' },
+      'unpublish',
+      null
+    );
     expect(env.MEDIA.objects.has('artifact/thumb.webp')).toBe(false);
     expect(env.UNPUBLISHED_MEDIA.objects.has('artifact/thumb.webp')).toBe(true);
     expect(
@@ -177,7 +186,7 @@ describe('artifact moderation transitions', () => {
         d1(database),
         { MEDIA: bucket(), UNPUBLISHED_MEDIA: bucket() },
         'artifact',
-        'moderator',
+        { type: 'moderator', id: 'moderator' },
         'publish',
         null
       )
@@ -192,5 +201,59 @@ describe('artifact moderation transitions', () => {
     ).toEqual({
       publication_status: 'draft'
     });
+  });
+
+  it('automatically publishes eligible artifacts from a completed run and records automation', async () => {
+    const database = fixture();
+    const runId = '00000000-0000-4000-8000-000000000000';
+    database
+      .prepare(
+        `INSERT INTO ingestion_runs(id,source,status,started_at) VALUES(?,'met','completed',?)`
+      )
+      .run(runId, Date.now());
+    database
+      .prepare(
+        `INSERT INTO ingestion_jobs(id,run_id,source,external_id,status)
+         VALUES('job',?,'met','42','completed')`
+      )
+      .run(runId);
+    const db = d1(database);
+    const env = { MEDIA: bucket(), UNPUBLISHED_MEDIA: bucket() };
+    await env.UNPUBLISHED_MEDIA.put('artifact/thumb.webp', 'image');
+
+    await expect(
+      publishEligibleRunArtifacts({ DB: db, ...env } as never, [runId])
+    ).resolves.toEqual({ published: ['artifact'], failed: [] });
+    expect(
+      database
+        .prepare('SELECT moderator_id,actor_type,action FROM artifact_publication_events')
+        .get()
+    ).toEqual({ moderator_id: null, actor_type: 'automation', action: 'publish' });
+    expect(env.MEDIA.objects.has('artifact/thumb.webp')).toBe(true);
+
+    await expect(
+      publishEligibleRunArtifacts({ DB: db, ...env } as never, [runId])
+    ).resolves.toEqual({ published: [], failed: [] });
+    expect(
+      database.prepare('SELECT COUNT(*) count FROM artifact_publication_events').get()
+    ).toEqual({
+      count: 1
+    });
+  });
+
+  it('does not publish until the ingestion run is terminal', async () => {
+    const database = fixture();
+    const runId = '00000000-0000-4000-8000-000000000001';
+    database
+      .prepare(
+        `INSERT INTO ingestion_runs(id,source,status,started_at) VALUES(?,'met','running',?)`
+      )
+      .run(runId, Date.now());
+    await expect(
+      publishEligibleRunArtifacts(
+        { DB: d1(database), MEDIA: bucket(), UNPUBLISHED_MEDIA: bucket() } as never,
+        [runId]
+      )
+    ).rejects.toMatchObject({ status: 409 });
   });
 });

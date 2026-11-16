@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { consumeIngestionQueue } from './queue.js';
+import { consumeIngestionDlq, consumeIngestionQueue } from './queue.js';
 
 const job = {
   id: 'job_0123456789abcdef01234567',
@@ -19,7 +19,12 @@ function setup(
   const item = message(job);
   const env = {
     INGEST_WORKFLOW: { create, get },
-    DB: { prepare: () => ({ bind: () => ({ run: vi.fn() }) }) }
+    DB: {
+      prepare: (sql: string) => ({
+        bind: (...values: unknown[]) => ({ sql, values, run: vi.fn() })
+      }),
+      batch: vi.fn().mockResolvedValue([])
+    }
   };
   return { item, env };
 }
@@ -63,5 +68,29 @@ describe('ingestion Queue consumer', () => {
     expect(transient.retry).toHaveBeenCalledOnce();
     expect(invalid.ack).not.toHaveBeenCalled();
     expect(transient.ack).not.toHaveBeenCalled();
+  });
+
+  it('marks jobs failed when the dead-letter Queue receives exhausted deliveries', async () => {
+    const create = vi.fn();
+    const { item, env } = setup(create);
+    await consumeIngestionDlq(
+      { queue: 'culturio-ingest-dlq', messages: [item] } as never,
+      env as never
+    );
+    expect(env.DB.batch).toHaveBeenCalledOnce();
+    expect(env.DB.batch.mock.calls[0][0][0]).toMatchObject({
+      sql: expect.stringContaining('UPDATE ingestion_jobs SET status=?'),
+      values: [
+        'failed',
+        null,
+        'Queue retries exhausted before Workflow start.',
+        expect.any(Number),
+        expect.any(Number),
+        job.id,
+        1
+      ]
+    });
+    expect(item.ack).toHaveBeenCalledOnce();
+    expect(item.retry).not.toHaveBeenCalled();
   });
 });

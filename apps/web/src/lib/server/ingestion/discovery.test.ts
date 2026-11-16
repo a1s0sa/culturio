@@ -66,4 +66,65 @@ describe('ingestion discovery', () => {
     expect(sendBatch.mock.calls[0][0][0].body.id).toMatch(/^job_[a-f0-9]{24}$/);
     expect(db.batch).toHaveBeenCalledOnce();
   });
+
+  it('does not queue Smithsonian records with no redistributable image', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith('/search')) {
+          return Response.json({
+            response: {
+              rowCount: 1,
+              rows: [
+                { id: 'si-1', title: 'Mask', url: 'https://www.si.edu/object/si-1', content: {} }
+              ]
+            }
+          });
+        }
+        return Response.json({
+          response: {
+            id: 'si-1',
+            title: 'Mask',
+            url: 'https://www.si.edu/object/si-1',
+            content: {
+              indexedStructured: { place: ['Nigeria'], culture: ['Yoruba'] },
+              descriptiveNonRepeating: {
+                online_media: {
+                  media: ['https://ids.si.edu/abc/object.jpg'],
+                  usage: 'All rights reserved'
+                }
+              }
+            }
+          }
+        });
+      })
+    );
+    const db = {
+      prepare: vi.fn((sql: string) => ({
+        bind: (..._args: unknown[]) => ({
+          first: async () => null,
+          run: async () => ({ success: true })
+        })
+      })),
+      batch: vi.fn().mockResolvedValue([])
+    };
+    const sendBatch = vi.fn().mockResolvedValue(undefined);
+    const unpublished = { put: vi.fn(), delete: vi.fn() };
+
+    const result = await discoverAndQueue(
+      {
+        DB: db,
+        UNPUBLISHED_MEDIA: unpublished,
+        INGEST_QUEUE: { sendBatch },
+        SMITHSONIAN_API_KEY: 'test-key'
+      } as never,
+      'smithsonian',
+      20
+    );
+
+    expect(result).toMatchObject({ discovered: 0, scanned: 1, rejected: 1 });
+    expect(sendBatch).not.toHaveBeenCalled();
+    expect(unpublished.put).not.toHaveBeenCalled();
+  });
 });

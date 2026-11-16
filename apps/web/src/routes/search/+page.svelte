@@ -4,6 +4,7 @@
   import type { ArtifactCardView } from '@culturio/db';
   import MasonryGrid from '$lib/components/gallery/MasonryGrid.svelte';
   import LoadMore from '$lib/components/gallery/LoadMore.svelte';
+  import SearchCountryFilter from '$lib/components/gallery/SearchCountryFilter.svelte';
   import SocialMeta from '$lib/components/seo/SocialMeta.svelte';
   import type { PageProps } from './$types';
 
@@ -80,7 +81,7 @@
 </script>
 
 <svelte:head>
-  <title>{data.query ? `Search “${data.query}”` : 'Search the archive'} — Culturio</title>
+  <title>{data.query.q ? `Search “${data.query.q}”` : 'Search the archive'} — Culturio</title>
   <meta
     name="description"
     content="Search Culturio’s archive of African artifacts by object, culture, material, place, or period."
@@ -89,7 +90,7 @@
   <link rel="canonical" href="https://culturio.africa/search" />
 </svelte:head>
 <SocialMeta
-  title={data.query ? `Search “${data.query}” — Culturio` : 'Search the archive — Culturio'}
+  title={data.query.q ? `Search “${data.query.q}” — Culturio` : 'Search the archive — Culturio'}
   description="Search Culturio's archive of African artifacts by object, culture, material, place, or period."
   url="https://culturio.africa/search"
   image="https://culturio.africa/opengraph/culturio-home.jpg"
@@ -100,7 +101,7 @@
   <section class="search-hero" aria-labelledby="search-title">
     <p class="eyebrow">A collection of stories</p>
     <h1 id="search-title" class="editorial-title">
-      {data.query ? `Explore ${data.query}` : 'What would you like to discover?'}
+      {data.query.q ? `Explore ${data.query.q}` : 'What would you like to discover?'}
     </h1>
     <p class="intro">
       Search objects, cultures, materials, places, and the histories between them.
@@ -114,10 +115,11 @@
         id="archive-search"
         type="search"
         name="q"
-        value={data.query}
+        value={data.query.q}
         placeholder="Try “Benin bronze” or “Nok terracotta”"
         autocomplete="off"
       />
+      {#if data.query.country}<input type="hidden" name="country" value={data.query.country} />{/if}
       <button type="submit">Search</button>
     </form>
     <div class="ideas" aria-label="Suggested searches">
@@ -133,9 +135,12 @@
       <div>
         <p class="eyebrow">From the archive</p>
         <h2 id="results-title" class="editorial-title">
-          {data.query ? `Results for “${data.query}”` : 'A few places to begin'}
+          {data.query.q ? `Results for “${data.query.q}”` : 'A few places to begin'}
         </h2>
       </div>
+    </div>
+    <div class="results-toolbar">
+      <SearchCountryFilter countries={data.filters.countries} selected={data.query.country} />
       <p class="count" aria-live="polite">
         {items.length ? `${items.length} artifacts shown` : 'No matching artifacts yet'}
       </p>
@@ -254,8 +259,16 @@
     line-height: 0.95;
   }
   .count {
+    margin: 0;
     color: var(--color-muted);
     font-size: 0.78rem;
+  }
+  .results-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: -0.5rem 0 1.5rem;
   }
   .sentinel {
     height: 1px;

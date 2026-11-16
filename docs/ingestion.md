@@ -7,11 +7,13 @@ Production ingestion runs in the deployed Cloudflare Worker. The authenticated
 Met or Smithsonian discovery adapter, stores job/run state in D1, and publishes
 bounded batches to `culturio-ingest`. Met search terms match any object data,
 so discovery fetches candidate metadata and checks its origin and image list
-before queueing it. Confirmed Met metadata is cached in R2 for the Workflow to
-reuse. Discovery does not download or process artifact images.
+before queueing it. It queues only origin-confirmed records with at least one
+redistributable image. Confirmed Met metadata is cached in R2 for the Workflow
+to reuse. Discovery does not download or process artifact images.
 
 Each discovery request scans at most 20 source IDs and queues at most 20
-records. D1-known records are only queued again after 30 days, allowing changed
+records. A source with few eligible records may queue fewer than 20; its cursor
+still advances across the scanned IDs. D1-known records are only queued again after 30 days, allowing changed
 source records to be refreshed without creating a Workflow for every already
 ingested ID on each pass. Open review records are left for review, and recently
 failed jobs have a six-hour discovery cooldown. When a source scan reaches the end, its offset resets
@@ -31,7 +33,7 @@ the DLQ after marking them failed in D1.
 Each Workflow runs durable steps for metadata retrieval and normalization,
 duplicate detection, image storage, D1 persistence, and job completion. Source
 adapters, schemas, geography classification, date parsing, licensing rules,
-and deterministic database identities follow the existing ingestion package.
+and deterministic database identities are shared from `@culturio/shared`.
 The normalized metadata is temporarily held in R2 and steps pass its key rather
 than large raw records. Images are downloaded only for records whose license
 permits redistribution. The original is stored unchanged; Cloudflare Images
@@ -91,10 +93,13 @@ pnpm --dir apps/web exec wrangler r2 bucket create culturio-media
 
 Set the existing Smithsonian credential and the trigger bearer token as Worker
 secrets. `INGESTION_TRIGGER_SECRET` must be a long random value; do not commit it.
+Set a separate `INGESTION_AUTOPUBLISH_SECRET` for the completed-run publication
+endpoint. Keep it only in the Worker and the GitHub Actions secret store.
 
 ```sh
 pnpm --dir apps/web exec wrangler secret put SMITHSONIAN_API_KEY
 pnpm --dir apps/web exec wrangler secret put INGESTION_TRIGGER_SECRET
+pnpm --dir apps/web exec wrangler secret put INGESTION_AUTOPUBLISH_SECRET
 ```
 
 Cloudflare Images must be enabled for the account. No Images account hash or
@@ -154,9 +159,32 @@ normal SvelteKit `fetch` Worker to `.svelte-kit/cloudflare/_worker.js` using
 generated handler and exports the Queue handler and Workflow class. The
 generated file is never edited or renamed by hand.
 
-Trigger discovery with the same JSON body and bearer token against the deployed
-Worker. The GitHub Actions ingestion runner has been removed; GitHub Actions
-must not process artifact or image jobs.
+Use **Actions → Remote ingestion → Run workflow** to select MET or Smithsonian.
+Each dispatch scans up to 20 records from the selected museum, queues qualifying
+jobs, waits until the D1 run is terminal, then asks the Worker to publish only
+eligible artifacts from that run. Eligible means confirmed African origin and
+at least one processed, redistributable image with variants. Publishing copies
+variants from the private bucket to the public bucket, updates D1, and records
+an automation audit event. Failed and ambiguous records remain unpublished.
+
+Configure these GitHub repository secrets: `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_ID`, `INGESTION_TRIGGER_SECRET`, and
+`INGESTION_AUTOPUBLISH_SECRET`. The Cloudflare token needs D1 access for Wrangler
+to poll the run. Add the repository variable `CULTURIO_WORKER_URL` with the
+deployed Worker base URL. On a personal repository, only its owner passes the
+workflow guard. For an organization-owned repository, also set
+`INGESTION_OWNER_LOGINS` to a comma-separated list of organization owner
+usernames; the workflow skips all other actors before exposing secrets.
+
+The workflow uses `cloudflare/wrangler-action` to run Wrangler against remote
+D1. It polls `ingestion_runs` by the run ID returned from discovery; Queue depth
+alone is not sufficient because Workflows may still be processing after a
+message leaves the Queue. GitHub serializes dispatches so two production batches
+cannot overlap.
+
+For a direct remote discovery trigger without waiting or automatic publication,
+set `CULTURIO_WORKER_URL` and `INGESTION_TRIGGER_SECRET` in your shell and run
+`pnpm ingest --source met --limit 5`. The command returns after jobs are queued.
 
 Monitor Queue depth and DLQ messages in the Cloudflare dashboard or with:
 

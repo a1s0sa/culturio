@@ -8,7 +8,8 @@ for (const migration of [
   '0002_ingestion_jobs.sql',
   '0003_enum_validation.sql',
   '0004_met_discovery_cursor.sql',
-  '0005_artifact_publication.sql'
+  '0005_artifact_publication.sql',
+  '0006_automated_publication.sql'
 ]) {
   database.exec(readFileSync(new URL(`../migrations/${migration}`, import.meta.url), 'utf8'));
 }
@@ -18,6 +19,18 @@ database
     'INSERT INTO artifacts(id,slug,title,publication_status,created_at,updated_at) VALUES(?,?,?,?,?,?)'
   )
   .run('validation', 'validation', 'Yoruba mask', 'published', now, now);
+database
+  .prepare(
+    `INSERT INTO artifact_publication_events(id,artifact_id,moderator_id,actor_type,action,note,created_at)
+     VALUES(?, ?, NULL, 'automation', 'publish', NULL, ?)`
+  )
+  .run('automated-validation', 'validation', now);
+if (
+  database
+    .prepare('SELECT actor_type FROM artifact_publication_events WHERE id=?')
+    .get('automated-validation').actor_type !== 'automation'
+)
+  throw new Error('Automated publication audit records are invalid');
 const indexed = database
   .prepare(
     `SELECT a.id FROM artifacts_fts JOIN artifacts a ON a.rowid=artifacts_fts.rowid WHERE artifacts_fts MATCH ? AND a.publication_status='published' ORDER BY bm25(artifacts_fts)`

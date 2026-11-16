@@ -1,6 +1,9 @@
-import { MetAdapter } from '../../../../../../scripts/ingestion/src/adapters/met.js';
-import { SmithsonianAdapter } from '../../../../../../scripts/ingestion/src/adapters/smithsonian.js';
-import type { NormalizedArtifact, SourceName } from '@culturio/shared';
+import {
+  MetAdapter,
+  SmithsonianAdapter,
+  type NormalizedArtifact,
+  type SourceName
+} from '@culturio/shared';
 
 export interface IngestionJob {
   id: string;

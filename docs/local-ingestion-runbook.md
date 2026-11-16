@@ -36,6 +36,11 @@ The remote command calls the deployed Worker's discovery endpoint. It does not
 build or deploy the Worker, and it returns after discovery is queued; Cloudflare
 continues processing Queue and Workflow jobs independently.
 
+The root `pnpm ingest` command reads variables from the root `.env` using
+Node's built-in environment-file loader; no dotenv package is used. Set
+`CULTURIO_WORKER_URL` and `INGESTION_TRIGGER_SECRET` there or export them in the
+shell before running the command.
+
 Set the deployed Worker base URL and the same trigger secret configured on the
 Worker. Wrangler cannot display an existing secret, so use the value from your
 secret manager. In Bash, enter the secret without echoing it:
@@ -54,6 +59,12 @@ Queues, Workflow, and `INGESTION_TRIGGER_SECRET` configured. Use a small limit
 first; discovery calls live museum APIs and queued processing writes to
 production D1 and R2. The command accepts the same `--source` and `--limit`
 options as `ingest:local`.
+
+For a run that also waits for processing and automatically publishes eligible
+results, use **Actions → Remote ingestion → Run workflow** instead. That
+workflow is restricted to the repository owner (and the explicit owner login
+allowlist for organization repositories); setup is documented in
+[docs/ingestion.md](ingestion.md).
 
 Check recent production runs with:
 
