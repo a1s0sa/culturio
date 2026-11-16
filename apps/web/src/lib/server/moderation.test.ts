@@ -37,9 +37,13 @@ function d1(database: DatabaseSync): D1Database {
   } as unknown as D1Database;
 }
 
-function bucket(): R2Bucket {
+function bucket() {
   const objects = new Map<string, Uint8Array>();
-  return {
+  const binding = {
+    objects,
+    async head(key: string) {
+      return objects.has(key) ? {} : null;
+    },
     async get(key: string) {
       const bytes = objects.get(key);
       if (!bytes) return null;
@@ -56,14 +60,15 @@ function bucket(): R2Bucket {
     async put(key: string, body: ReadableStream | ArrayBuffer | ArrayBufferView | string) {
       objects.set(
         key,
-        typeof body === 'string' ? new TextEncoder().encode(body) : new Uint8Array()
+        typeof body === 'string' ? new TextEncoder().encode(body) : new Uint8Array([1])
       );
       return {};
     },
     async delete(key: string) {
       objects.delete(key);
     }
-  } as unknown as R2Bucket;
+  } as unknown as R2Bucket & { objects: Map<string, Uint8Array> };
+  return binding;
 }
 
 function fixture() {
@@ -134,6 +139,8 @@ describe('artifact moderation transitions', () => {
       'publish',
       'Reviewed source and rights'
     );
+    expect(env.MEDIA.objects.has('artifact/thumb.webp')).toBe(true);
+    expect(env.UNPUBLISHED_MEDIA.objects.has('artifact/thumb.webp')).toBe(false);
     expect(
       database.prepare("SELECT publication_status FROM artifacts WHERE id='artifact'").get()
     ).toEqual({ publication_status: 'published' });
@@ -149,6 +156,8 @@ describe('artifact moderation transitions', () => {
     });
 
     await publishArtifact(db, env, 'artifact', 'moderator', 'unpublish', null);
+    expect(env.MEDIA.objects.has('artifact/thumb.webp')).toBe(false);
+    expect(env.UNPUBLISHED_MEDIA.objects.has('artifact/thumb.webp')).toBe(true);
     expect(
       database.prepare("SELECT publication_status FROM artifacts WHERE id='artifact'").get()
     ).toEqual({ publication_status: 'draft' });

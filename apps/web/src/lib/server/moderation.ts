@@ -217,6 +217,9 @@ export async function publishArtifact(
       await Promise.all(copiedKeys.map((key) => env.MEDIA.delete(key)));
       throw cause;
     }
+    // Keep only source originals in the private bucket after publication.
+    // A cleanup failure must not make a completed D1 transition look unsuccessful.
+    await Promise.allSettled(copiedKeys.map((key) => env.UNPUBLISHED_MEDIA.delete(key)));
     return;
   }
 
@@ -227,6 +230,25 @@ export async function publishArtifact(
     )
     .bind(artifactId)
     .all<{ object_key: string }>();
+
+  const restoredKeys: string[] = [];
+  try {
+    for (const { object_key: key } of results) {
+      if (await env.UNPUBLISHED_MEDIA.head(key)) continue;
+      const source = await env.MEDIA.get(key);
+      if (!source) error(409, 'A published image variant is missing.');
+      await env.UNPUBLISHED_MEDIA.put(key, source.body, {
+        httpMetadata: {
+          contentType: source.httpMetadata?.contentType ?? 'image/webp',
+          cacheControl: 'private, no-store'
+        }
+      });
+      restoredKeys.push(key);
+    }
+  } catch (cause) {
+    await Promise.allSettled(restoredKeys.map((key) => env.UNPUBLISHED_MEDIA.delete(key)));
+    throw cause;
+  }
 
   const transition = db
     .prepare(
