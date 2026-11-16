@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 function argumentsFrom(argv) {
   const options = { source: 'met', limit: 5 };
   for (let index = 0; index < argv.length; index += 1) {
@@ -23,6 +25,12 @@ function argumentsFrom(argv) {
 }
 
 async function main() {
+  try {
+    process.loadEnvFile(fileURLToPath(new URL('../.env', import.meta.url)));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+
   const options = argumentsFrom(process.argv.slice(2));
   const workerUrl = process.env.CULTURIO_WORKER_URL;
   const secret = process.env.INGESTION_TRIGGER_SECRET;
