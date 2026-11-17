@@ -4,7 +4,7 @@ import type { IngestionEnv, IngestionJob } from './types.js';
 import { adapterFor, retrieveAndNormalize } from './types.js';
 
 const MAX_DISCOVERY_JOBS = 20;
-const MAX_DISCOVERY_SCAN = 20;
+const MAX_DISCOVERY_SCAN = 5;
 const REFRESH_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 const FAILED_JOB_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const ACTIVE_JOB_COOLDOWN_MS = 6 * 60 * 60 * 1000;
@@ -12,10 +12,15 @@ const ACTIVE_JOB_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 export async function discoverAndQueue(
   env: IngestionEnv,
   sourceInput: unknown,
-  limitInput: unknown
+  limitInput: unknown,
+  scanLimitInput: unknown = MAX_DISCOVERY_SCAN
 ) {
   const source = sourceNameSchema.parse(sourceInput);
   const limit = Math.min(Math.max(Number(limitInput) || 100, 1), MAX_DISCOVERY_JOBS);
+  const scanLimit = Math.min(
+    Math.max(Number(scanLimitInput) || MAX_DISCOVERY_SCAN, 1),
+    MAX_DISCOVERY_SCAN
+  );
   const runId = crypto.randomUUID();
   const now = Date.now();
   const metadataKeys: string[] = [];
@@ -88,7 +93,7 @@ export async function discoverAndQueue(
           if (!reasonCode) throw error;
           await recordRejection(env, runId, source, record.externalId, reasonCode, String(error));
           rejected += 1;
-          if (scanned >= MAX_DISCOVERY_SCAN) {
+          if (scanned >= scanLimit) {
             exhausted = false;
             break;
           }
@@ -117,7 +122,7 @@ export async function discoverAndQueue(
                 : 'Source metadata has no redistributable images'
           );
           rejected += 1;
-          if (scanned >= MAX_DISCOVERY_SCAN) {
+          if (scanned >= scanLimit) {
             exhausted = false;
             break;
           }
@@ -137,7 +142,7 @@ export async function discoverAndQueue(
         queueMessages.push({ body: job });
         discovered += 1;
       }
-      if (discovered >= limit || scanned >= MAX_DISCOVERY_SCAN) {
+      if (discovered >= limit || scanned >= scanLimit) {
         exhausted = false;
         break;
       }
