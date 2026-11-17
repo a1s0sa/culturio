@@ -128,7 +128,7 @@ describe('ingestion discovery', () => {
     expect(unpublished.put).not.toHaveBeenCalled();
   });
 
-  it('keeps scanning past 20 ineligible records to fill the requested job count', async () => {
+  it('caps each request at 20 records and resumes from its checkpoint', async () => {
     const rows = Array.from({ length: 21 }, (_, index) => ({
       id: `si-${index + 1}`,
       title: 'Mask',
@@ -139,8 +139,10 @@ describe('ingestion discovery', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = new URL(String(input));
-        if (url.pathname.endsWith('/search'))
-          return Response.json({ response: { rowCount: rows.length, rows } });
+        if (url.pathname.endsWith('/search')) {
+          const start = Number(url.searchParams.get('start') ?? 0);
+          return Response.json({ response: { rowCount: rows.length, rows: rows.slice(start) } });
+        }
 
         const id = url.pathname.split('/').at(-1)!;
         return Response.json({
@@ -161,10 +163,12 @@ describe('ingestion discovery', () => {
         });
       })
     );
+    let checkpointOffset = 0;
     const db = {
-      prepare: vi.fn(() => ({
+      prepare: vi.fn((sql: string) => ({
         bind: (..._args: unknown[]) => ({
-          first: async () => null,
+          first: async () =>
+            sql.includes('SELECT offset') ? { offset: checkpointOffset, cursor: null } : null,
           run: async () => ({ success: true })
         })
       })),
@@ -173,18 +177,27 @@ describe('ingestion discovery', () => {
     const sendBatch = vi.fn().mockResolvedValue(undefined);
     const unpublished = { put: vi.fn().mockResolvedValue(undefined), delete: vi.fn() };
 
-    const result = await discoverAndQueue(
-      {
-        DB: db,
-        UNPUBLISHED_MEDIA: unpublished,
-        INGEST_QUEUE: { sendBatch },
-        SMITHSONIAN_API_KEY: 'test-key'
-      } as never,
-      'smithsonian',
-      1
-    );
+    const env = {
+      DB: db,
+      UNPUBLISHED_MEDIA: unpublished,
+      INGEST_QUEUE: { sendBatch },
+      SMITHSONIAN_API_KEY: 'test-key'
+    } as never;
+    const firstResult = await discoverAndQueue(env, 'smithsonian', 20);
 
-    expect(result).toMatchObject({ discovered: 1, scanned: 21, rejected: 20 });
+    expect(firstResult).toMatchObject({
+      discovered: 0,
+      scanned: 20,
+      rejected: 20,
+      exhausted: false,
+      checkpoint: { offset: 20 }
+    });
+    expect(sendBatch).not.toHaveBeenCalled();
+    checkpointOffset = firstResult.checkpoint.offset;
+
+    const result = await discoverAndQueue(env, 'smithsonian', 1);
+
+    expect(result).toMatchObject({ discovered: 1, scanned: 1, rejected: 0, exhausted: false });
     expect(result.checkpoint.offset).toBe(21);
     expect(sendBatch).toHaveBeenCalledOnce();
     expect(sendBatch.mock.calls[0][0][0].body.externalId).toBe('si-21');

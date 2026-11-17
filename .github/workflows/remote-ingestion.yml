@@ -10,6 +10,11 @@ on:
         options:
           - met
           - smithsonian
+      limit:
+        description: Number of eligible items to discover (10–100)
+        required: true
+        default: 20
+        type: number
 
 permissions:
   contents: read
@@ -50,5 +55,6 @@ jobs:
         env:
           CULTURIO_WORKER_URL: ${{ vars.CULTURIO_WORKER_URL }}
           INGESTION_SOURCE: ${{ inputs.source }}
+          INGESTION_LIMIT: ${{ inputs.limit }}
           INGESTION_TRIGGER_SECRET: ${{ secrets.INGESTION_TRIGGER_SECRET }}
           INGESTION_AUTOPUBLISH_SECRET: ${{ secrets.INGESTION_AUTOPUBLISH_SECRET }}
