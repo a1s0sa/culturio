@@ -80,7 +80,7 @@ finish image storage and processing.
 
 Trigger a new scan with `pnpm ingest --source met --limit 20`; discovery cooldowns and checkpoints prevent immediately repeating the same records. Retry a failed Workflow instance with Wrangler after reviewing its failure reason. Deterministic R2 keys make retries safe; D1 upserts use source identity. Review `review_records` for ambiguous geography, licensing, or source failures.
 
-The GitHub remote-ingestion workflow is manually dispatched and serializes production runs. It selects one museum and scans at most 20 records per run. It waits for Workflow completion before publishing eligible records.
+The GitHub remote-ingestion workflow is manually dispatched and serializes production runs. It selects one museum and queues up to 20 eligible records per run, scanning onward until it fills that limit or reaches the end of the source. It waits for Workflow completion before publishing eligible records.
 
 ## Deployment
 

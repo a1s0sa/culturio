@@ -9,6 +9,7 @@ const source = process.env.INGESTION_SOURCE;
 const limit = 20;
 const pollIntervalMs = 15_000;
 const timeoutMs = 3.5 * 60 * 60 * 1000;
+const requestTimeoutMs = 10 * 60 * 1000;
 
 if (!workerUrl || !triggerSecret || !publishSecret) {
   throw new Error(
@@ -30,7 +31,7 @@ async function post(path, secret, body) {
       'content-type': 'application/json'
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(90_000)
+    signal: AbortSignal.timeout(requestTimeoutMs)
   });
   const text = await response.text();
   let result;
