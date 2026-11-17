@@ -159,10 +159,13 @@ normal SvelteKit `fetch` Worker to `.svelte-kit/cloudflare/_worker.js` using
 generated handler and exports the Queue handler and Workflow class. The
 generated file is never edited or renamed by hand.
 
-Use **Actions → Remote ingestion → Run workflow** to select MET or Smithsonian.
-Each dispatch scans until it queues 20 qualifying jobs or reaches the end of the
-selected museum's source results, waits until the D1 run is terminal, then asks the Worker to publish only
-eligible artifacts from that run. Eligible means confirmed African origin and
+Use **Actions → Remote ingestion → Run workflow** to select MET or Smithsonian
+and choose a target of 10–100 eligible items. Each Worker request scans at most
+20 source IDs to stay within Cloudflare's per-invocation subrequest limit; the
+workflow repeats requests from the saved checkpoint until it reaches the target
+or exhausts the selected museum's source results. It then waits for all nonempty
+D1 runs to finish and asks the Worker to publish eligible artifacts from each
+run. Eligible means confirmed African origin and
 at least one processed, redistributable image with variants. Publishing copies
 variants from the private bucket to the public bucket, updates D1, and records
 an automation audit event. Failed and ambiguous records remain unpublished.
