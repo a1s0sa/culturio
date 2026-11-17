@@ -15,12 +15,15 @@ export const POST: RequestHandler = async ({ request }) => {
   try {
     const source = (input as { source?: unknown }).source;
     const limit = (input as { limit?: unknown }).limit;
+    const scanLimit = (input as { scanLimit?: unknown }).scanLimit;
     const sources = source === 'all' ? ['met', 'smithsonian'] : [source];
     if (!sources.every((item) => item === 'met' || item === 'smithsonian')) {
       return json({ error: 'source must be met, smithsonian, or all' }, { status: 400 });
     }
     const result = await Promise.all(
-      sources.map((item) => discoverAndQueue(env as unknown as IngestionEnv, item, limit))
+      sources.map((item) =>
+        discoverAndQueue(env as unknown as IngestionEnv, item, limit, scanLimit)
+      )
     );
     return json({ runs: result }, { status: 202 });
   } catch (error) {

@@ -128,7 +128,7 @@ describe('ingestion discovery', () => {
     expect(unpublished.put).not.toHaveBeenCalled();
   });
 
-  it('caps each request at 20 records and resumes from its checkpoint', async () => {
+  it('caps each request at five records and resumes from its checkpoint', async () => {
     const rows = Array.from({ length: 21 }, (_, index) => ({
       id: `si-${index + 1}`,
       title: 'Mask',
@@ -187,13 +187,19 @@ describe('ingestion discovery', () => {
 
     expect(firstResult).toMatchObject({
       discovered: 0,
-      scanned: 20,
-      rejected: 20,
+      scanned: 5,
+      rejected: 5,
       exhausted: false,
-      checkpoint: { offset: 20 }
+      checkpoint: { offset: 5 }
     });
     expect(sendBatch).not.toHaveBeenCalled();
     checkpointOffset = firstResult.checkpoint.offset;
+
+    for (let index = 0; index < 3; index += 1) {
+      const nextResult = await discoverAndQueue(env, 'smithsonian', 20);
+      expect(nextResult).toMatchObject({ scanned: 5, exhausted: false });
+      checkpointOffset = nextResult.checkpoint.offset;
+    }
 
     const result = await discoverAndQueue(env, 'smithsonian', 1);
 
