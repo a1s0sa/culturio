@@ -4,7 +4,6 @@ import type { IngestionEnv, IngestionJob } from './types.js';
 import { adapterFor, retrieveAndNormalize } from './types.js';
 
 const MAX_DISCOVERY_JOBS = 20;
-const MAX_DISCOVERY_SCAN = 20;
 const REFRESH_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 const FAILED_JOB_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const ACTIVE_JOB_COOLDOWN_MS = 6 * 60 * 60 * 1000;
@@ -88,10 +87,6 @@ export async function discoverAndQueue(
           if (!reasonCode) throw error;
           await recordRejection(env, runId, source, record.externalId, reasonCode, String(error));
           rejected += 1;
-          if (scanned >= MAX_DISCOVERY_SCAN) {
-            exhausted = false;
-            break;
-          }
           continue;
         }
         const hasRedistributableImage = artifact.images.some(
@@ -117,10 +112,6 @@ export async function discoverAndQueue(
                 : 'Source metadata has no redistributable images'
           );
           rejected += 1;
-          if (scanned >= MAX_DISCOVERY_SCAN) {
-            exhausted = false;
-            break;
-          }
           continue;
         }
         const metadataKey = `ingestion/jobs/${id}/artifact.json`;
@@ -137,7 +128,7 @@ export async function discoverAndQueue(
         queueMessages.push({ body: job });
         discovered += 1;
       }
-      if (discovered >= limit || scanned >= MAX_DISCOVERY_SCAN) {
+      if (discovered >= limit) {
         exhausted = false;
         break;
       }

@@ -160,8 +160,8 @@ generated handler and exports the Queue handler and Workflow class. The
 generated file is never edited or renamed by hand.
 
 Use **Actions → Remote ingestion → Run workflow** to select MET or Smithsonian.
-Each dispatch scans up to 20 records from the selected museum, queues qualifying
-jobs, waits until the D1 run is terminal, then asks the Worker to publish only
+Each dispatch scans until it queues 20 qualifying jobs or reaches the end of the
+selected museum's source results, waits until the D1 run is terminal, then asks the Worker to publish only
 eligible artifacts from that run. Eligible means confirmed African origin and
 at least one processed, redistributable image with variants. Publishing copies
 variants from the private bucket to the public bucket, updates D1, and records

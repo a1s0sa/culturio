@@ -127,4 +127,66 @@ describe('ingestion discovery', () => {
     expect(sendBatch).not.toHaveBeenCalled();
     expect(unpublished.put).not.toHaveBeenCalled();
   });
+
+  it('keeps scanning past 20 ineligible records to fill the requested job count', async () => {
+    const rows = Array.from({ length: 21 }, (_, index) => ({
+      id: `si-${index + 1}`,
+      title: 'Mask',
+      url: `https://www.si.edu/object/si-${index + 1}`,
+      content: {}
+    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith('/search'))
+          return Response.json({ response: { rowCount: rows.length, rows } });
+
+        const id = url.pathname.split('/').at(-1)!;
+        return Response.json({
+          response: {
+            id,
+            title: 'Mask',
+            url: `https://www.si.edu/object/${id}`,
+            content: {
+              indexedStructured: { place: ['Nigeria'], culture: ['Yoruba'] },
+              descriptiveNonRepeating: {
+                online_media: {
+                  media: [`https://ids.si.edu/${id}.jpg`],
+                  usage: id === 'si-21' ? 'CC0' : 'All rights reserved'
+                }
+              }
+            }
+          }
+        });
+      })
+    );
+    const db = {
+      prepare: vi.fn(() => ({
+        bind: (..._args: unknown[]) => ({
+          first: async () => null,
+          run: async () => ({ success: true })
+        })
+      })),
+      batch: vi.fn().mockResolvedValue([])
+    };
+    const sendBatch = vi.fn().mockResolvedValue(undefined);
+    const unpublished = { put: vi.fn().mockResolvedValue(undefined), delete: vi.fn() };
+
+    const result = await discoverAndQueue(
+      {
+        DB: db,
+        UNPUBLISHED_MEDIA: unpublished,
+        INGEST_QUEUE: { sendBatch },
+        SMITHSONIAN_API_KEY: 'test-key'
+      } as never,
+      'smithsonian',
+      1
+    );
+
+    expect(result).toMatchObject({ discovered: 1, scanned: 21, rejected: 20 });
+    expect(result.checkpoint.offset).toBe(21);
+    expect(sendBatch).toHaveBeenCalledOnce();
+    expect(sendBatch.mock.calls[0][0][0].body.externalId).toBe('si-21');
+  });
 });
