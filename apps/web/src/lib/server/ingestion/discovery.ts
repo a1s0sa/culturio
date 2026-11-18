@@ -203,6 +203,12 @@ export async function discoverAndQueue(
       await Promise.all(
         metadataKeys.map((key) => env.UNPUBLISHED_MEDIA.delete(key).catch(() => undefined))
       );
+      await env.DB.prepare(
+        "UPDATE ingestion_jobs SET status='failed',updated_at=0 WHERE run_id=? AND status='queued'"
+      )
+        .bind(runId)
+        .run()
+        .catch(() => undefined);
     }
     await env.DB.prepare(
       `UPDATE ingestion_runs SET status='failed',ended_at=?,errors=errors+1,report=?,updated_at=? WHERE id=?`
@@ -210,6 +216,9 @@ export async function discoverAndQueue(
       .bind(Date.now(), JSON.stringify({ failure: String(error) }), Date.now(), runId)
       .run()
       .catch(() => undefined);
+    if (error && typeof error === 'object') {
+      Object.assign(error, { runId, queueMessagesSent });
+    }
     throw error;
   }
 }
