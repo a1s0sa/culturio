@@ -8,6 +8,7 @@ const publishSecret = process.env.INGESTION_AUTOPUBLISH_SECRET;
 const source = process.env.INGESTION_SOURCE;
 const target = Number(process.env.INGESTION_LIMIT);
 const discoveryChunkSize = 20;
+let discoveryScanLimit = 5;
 const pollIntervalMs = 15_000;
 const timeoutMs = 3.5 * 60 * 60 * 1000;
 const requestTimeoutMs = 10 * 60 * 1000;
@@ -44,8 +45,12 @@ async function post(path, secret, body) {
   } catch {
     throw new Error(`${path} returned non-JSON (${response.status}): ${text}`);
   }
-  if (!response.ok)
-    throw new Error(`${path} returned ${response.status}: ${JSON.stringify(result)}`);
+  if (!response.ok) {
+    const error = new Error(`${path} returned ${response.status}: ${JSON.stringify(result)}`);
+    error.status = response.status;
+    error.response = result;
+    throw error;
+  }
   return result;
 }
 
@@ -80,7 +85,38 @@ let rejectedTotal = 0;
 let sourceExhausted = false;
 while (discoveredTotal < target && !sourceExhausted) {
   const limit = Math.min(discoveryChunkSize, target - discoveredTotal);
-  const discovery = await post('/api/ingestion/discover', triggerSecret, { source, limit });
+  let discovery;
+  while (!discovery) {
+    try {
+      discovery = await post('/api/ingestion/discover', triggerSecret, {
+        source,
+        limit,
+        scanLimit: discoveryScanLimit
+      });
+    } catch (error) {
+      const isSubrequestLimit =
+        error.status === 503 &&
+        String(error.response?.error ?? '').includes('Too many subrequests');
+      if (!isSubrequestLimit || discoveryScanLimit === 1) throw error;
+      if (
+        !/^[0-9a-f-]{36}$/i.test(error.response?.runId ?? '') ||
+        error.response?.queueMessagesSent !== false
+      ) {
+        throw new Error(
+          `${error.message} The Worker could not confirm that this failed run was safe to retry.`
+        );
+      }
+      const failedRunId = error.response.runId;
+      const retryableJobs = queryD1(
+        `UPDATE ingestion_jobs SET status='failed',updated_at=0 WHERE run_id='${failedRunId}' AND status='queued' RETURNING id`
+      );
+      const previousLimit = discoveryScanLimit;
+      discoveryScanLimit = Math.max(1, Math.floor(discoveryScanLimit / 2));
+      console.warn(
+        `Worker subrequest limit reached at scan size ${previousLimit}; marked ${retryableJobs.length} unsent jobs retryable and retrying this checkpoint with scan size ${discoveryScanLimit}.`
+      );
+    }
+  }
   const runs = discovery.runs;
   if (!Array.isArray(runs) || runs.length !== 1 || !runs[0]?.runId) {
     throw new Error(`Discovery returned an unexpected response: ${JSON.stringify(discovery)}`);
