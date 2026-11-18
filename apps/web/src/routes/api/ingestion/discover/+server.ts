@@ -29,7 +29,12 @@ export const POST: RequestHandler = async ({ request }) => {
   } catch (error) {
     console.error(JSON.stringify({ event: 'ingestion.discovery.failed', error: String(error) }));
     return json(
-      { error: error instanceof Error ? error.message : 'Discovery failed' },
+      {
+        error: error instanceof Error ? error.message : 'Discovery failed',
+        runId: error && typeof error === 'object' ? Reflect.get(error, 'runId') : undefined,
+        queueMessagesSent:
+          error && typeof error === 'object' ? Reflect.get(error, 'queueMessagesSent') : undefined
+      },
       { status: 503 }
     );
   }

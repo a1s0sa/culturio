@@ -98,10 +98,22 @@ while (discoveredTotal < target && !sourceExhausted) {
         error.status === 503 &&
         String(error.response?.error ?? '').includes('Too many subrequests');
       if (!isSubrequestLimit || discoveryScanLimit === 1) throw error;
+      if (
+        !/^[0-9a-f-]{36}$/i.test(error.response?.runId ?? '') ||
+        error.response?.queueMessagesSent !== false
+      ) {
+        throw new Error(
+          `${error.message} The Worker could not confirm that this failed run was safe to retry.`
+        );
+      }
+      const failedRunId = error.response.runId;
+      const retryableJobs = queryD1(
+        `UPDATE ingestion_jobs SET status='failed',updated_at=0 WHERE run_id='${failedRunId}' AND status='queued' RETURNING id`
+      );
       const previousLimit = discoveryScanLimit;
       discoveryScanLimit = Math.max(1, Math.floor(discoveryScanLimit / 2));
       console.warn(
-        `Worker subrequest limit reached at scan size ${previousLimit}; retrying this checkpoint with scan size ${discoveryScanLimit}.`
+        `Worker subrequest limit reached at scan size ${previousLimit}; marked ${retryableJobs.length} unsent jobs retryable and retrying this checkpoint with scan size ${discoveryScanLimit}.`
       );
     }
   }
