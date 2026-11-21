@@ -1,8 +1,59 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { onMount } from 'svelte';
+
+  let visible = $state(true);
+  let hideTimer: ReturnType<typeof setTimeout>;
+
+  function hideAfterIdle() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => (visible = false), 2600);
+  }
+
+  onMount(() => {
+    const handleScroll = () => {
+      visible = true;
+      hideAfterIdle();
+    };
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Tab') {
+        clearTimeout(hideTimer);
+        visible = true;
+      }
+    };
+    const handlePointerdown = (event: PointerEvent) => {
+      if ((event.target as Element).closest('a, button, input, select, textarea')) return;
+      visible = true;
+      hideAfterIdle();
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('keydown', handleKeydown);
+    window.addEventListener('pointerdown', handlePointerdown);
+    hideAfterIdle();
+
+    return () => {
+      clearTimeout(hideTimer);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('keydown', handleKeydown);
+      window.removeEventListener('pointerdown', handlePointerdown);
+    };
+  });
 </script>
 
-<nav aria-label="Mobile navigation">
+<nav
+  class={{ hidden: !visible }}
+  inert={!visible}
+  aria-label="Mobile navigation"
+  onfocusin={() => {
+    clearTimeout(hideTimer);
+    visible = true;
+  }}
+  onfocusout={(event) => {
+    if (!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget as Node))
+      hideAfterIdle();
+  }}
+>
   <a
     class="island"
     href="/"
@@ -53,6 +104,21 @@
       align-items: center;
       gap: 0.7rem;
       transform: translateX(-50%);
+      opacity: 1;
+      transition:
+        transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 300ms ease,
+        visibility 0s linear;
+      visibility: visible;
+    }
+    nav.hidden {
+      transform: translate(-50%, calc(100% + 2rem));
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 300ms ease,
+        visibility 0s linear 420ms;
     }
     .island {
       display: grid;
@@ -96,6 +162,9 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    nav {
+      transition: none;
+    }
     .island {
       transition: none;
     }
