@@ -88,7 +88,9 @@
       >← Back to {page.state.returnLabel ?? 'Gallery'}</a
     ><span> / </span><span aria-current="page">{a.title}</span>
   </nav>
-  <ArtifactDetails artifact={a} />
+  {#key a.id}
+    <ArtifactDetails artifact={a} />
+  {/key}
 </main>
 
 <style>
