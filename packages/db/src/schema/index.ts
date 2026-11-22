@@ -201,6 +201,8 @@ export const ingestionRuns = sqliteTable('ingestion_runs', {
   imagesProcessed: integer('images_processed').notNull().default(0),
   errors: integer('errors').notNull().default(0),
   report: text('report', { mode: 'json' }),
+  requestId: text('request_id'),
+  requestResult: text('request_result', { mode: 'json' }),
   ...timestamps
 });
 export const ingestionCheckpoints = sqliteTable(

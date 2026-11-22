@@ -9,7 +9,8 @@ for (const migration of [
   '0003_enum_validation.sql',
   '0004_met_discovery_cursor.sql',
   '0005_artifact_publication.sql',
-  '0006_automated_publication.sql'
+  '0006_automated_publication.sql',
+  '0007_discovery_request_idempotency.sql'
 ]) {
   database.exec(readFileSync(new URL(`../migrations/${migration}`, import.meta.url), 'utf8'));
 }
