@@ -29,15 +29,29 @@ const baseUrl = new URL(workerUrl);
 if (baseUrl.protocol !== 'https:') throw new Error('CULTURIO_WORKER_URL must use HTTPS.');
 
 async function post(path, secret, body) {
-  const response = await fetch(new URL(path, baseUrl), {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${secret}`,
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(requestTimeoutMs)
-  });
+  let response;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      response = await fetch(new URL(path, baseUrl), {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${secret}`,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(requestTimeoutMs)
+      });
+      break;
+    } catch (error) {
+      if (path !== '/api/ingestion/discover') throw error;
+      if (attempt >= 5) return recoverDiscovery(body.requestId, error);
+      const waitMs = Math.min(1000 * 2 ** attempt, 30_000);
+      console.warn(
+        `Discovery request lost its connection; retrying the same request in ${waitMs}ms.`
+      );
+      await delay(waitMs);
+    }
+  }
   const text = await response.text();
   let result;
   try {
@@ -52,6 +66,24 @@ async function post(path, secret, body) {
     throw error;
   }
   return result;
+}
+
+async function recoverDiscovery(requestId, originalError) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < requestTimeoutMs) {
+    const rows = queryD1(
+      `SELECT status,request_result FROM ingestion_runs WHERE request_id='${requestId}' LIMIT 1`
+    );
+    const run = rows[0];
+    if (run?.request_result) {
+      const result = JSON.parse(run.request_result);
+      console.warn(`Recovered discovery response for request ${requestId} from D1.`);
+      return { runs: [result] };
+    }
+    if (run?.status === 'failed') throw originalError;
+    await delay(2_000);
+  }
+  throw originalError;
 }
 
 function queryD1(sql) {
@@ -86,14 +118,23 @@ let sourceExhausted = false;
 while (discoveredTotal < target && !sourceExhausted) {
   const limit = Math.min(discoveryChunkSize, target - discoveredTotal);
   let discovery;
+  let requestId = crypto.randomUUID();
   while (!discovery) {
     try {
       discovery = await post('/api/ingestion/discover', triggerSecret, {
         source,
         limit,
-        scanLimit: discoveryScanLimit
+        scanLimit: discoveryScanLimit,
+        requestId
       });
     } catch (error) {
+      if (
+        error.status === 503 &&
+        String(error.response?.error ?? '').includes('still processing')
+      ) {
+        await delay(2_000);
+        continue;
+      }
       const isSubrequestLimit =
         error.status === 503 &&
         String(error.response?.error ?? '').includes('Too many subrequests');
@@ -112,6 +153,7 @@ while (discoveredTotal < target && !sourceExhausted) {
       );
       const previousLimit = discoveryScanLimit;
       discoveryScanLimit = Math.max(1, Math.floor(discoveryScanLimit / 2));
+      requestId = crypto.randomUUID();
       console.warn(
         `Worker subrequest limit reached at scan size ${previousLimit}; marked ${retryableJobs.length} unsent jobs retryable and retrying this checkpoint with scan size ${discoveryScanLimit}.`
       );
@@ -122,6 +164,11 @@ while (discoveredTotal < target && !sourceExhausted) {
     throw new Error(`Discovery returned an unexpected response: ${JSON.stringify(discovery)}`);
   }
   const run = runs[0];
+  if (run.requestId !== requestId) {
+    throw new Error(
+      'The Worker did not confirm the discovery request ID. Deploy the updated Worker before retrying.'
+    );
+  }
   if (!/^[0-9a-f-]{36}$/i.test(run.runId)) throw new Error('Discovery returned an invalid run ID.');
   if (typeof run.exhausted !== 'boolean') {
     throw new Error(

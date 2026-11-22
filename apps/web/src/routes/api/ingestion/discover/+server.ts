@@ -16,13 +16,25 @@ export const POST: RequestHandler = async ({ request }) => {
     const source = (input as { source?: unknown }).source;
     const limit = (input as { limit?: unknown }).limit;
     const scanLimit = (input as { scanLimit?: unknown }).scanLimit;
+    const requestId = (input as { requestId?: unknown }).requestId;
+    if (
+      requestId !== undefined &&
+      (typeof requestId !== 'string' || !/^[0-9a-f-]{36}$/i.test(requestId))
+    )
+      return json({ error: 'requestId must be a UUID' }, { status: 400 });
     const sources = source === 'all' ? ['met', 'smithsonian'] : [source];
     if (!sources.every((item) => item === 'met' || item === 'smithsonian')) {
       return json({ error: 'source must be met, smithsonian, or all' }, { status: 400 });
     }
     const result = await Promise.all(
       sources.map((item) =>
-        discoverAndQueue(env as unknown as IngestionEnv, item, limit, scanLimit)
+        discoverAndQueue(
+          env as unknown as IngestionEnv,
+          item,
+          limit,
+          scanLimit,
+          requestId as string | undefined
+        )
       )
     );
     return json({ runs: result }, { status: 202 });

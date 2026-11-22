@@ -13,7 +13,8 @@ export async function discoverAndQueue(
   env: IngestionEnv,
   sourceInput: unknown,
   limitInput: unknown,
-  scanLimitInput: unknown = MAX_DISCOVERY_SCAN
+  scanLimitInput: unknown = MAX_DISCOVERY_SCAN,
+  requestId?: string
 ) {
   const source = sourceNameSchema.parse(sourceInput);
   const limit = Math.min(Math.max(Number(limitInput) || 100, 1), MAX_DISCOVERY_JOBS);
@@ -21,16 +22,53 @@ export async function discoverAndQueue(
     Math.max(Number(scanLimitInput) || MAX_DISCOVERY_SCAN, 1),
     MAX_DISCOVERY_SCAN
   );
+  if (requestId) {
+    const previous = await env.DB.prepare(
+      'SELECT id, status, request_result FROM ingestion_runs WHERE request_id = ?'
+    )
+      .bind(requestId)
+      .first<{ id: string; status: string; request_result: string | null }>();
+    if (previous?.request_result) return JSON.parse(previous.request_result);
+    if (previous?.status === 'running') {
+      throw Object.assign(new Error('Discovery request is still processing.'), {
+        runId: previous.id,
+        queueMessagesSent: false
+      });
+    }
+    if (previous?.status === 'failed') {
+      throw Object.assign(new Error('The original discovery request failed.'), {
+        runId: previous.id,
+        queueMessagesSent: false
+      });
+    }
+  }
   const runId = crypto.randomUUID();
   const now = Date.now();
   const metadataKeys: string[] = [];
   let queueMessagesSent = false;
-  await env.DB.prepare(
-    `INSERT INTO ingestion_runs (id,source,status,started_at,discovered,processed,inserted,updated,skipped,rejected,images_processed,errors,created_at,updated_at)
-     VALUES (?,?,'running',?,0,0,0,0,0,0,0,0,?,?)`
+  const inserted = await env.DB.prepare(
+    `INSERT INTO ingestion_runs (id,source,status,started_at,discovered,processed,inserted,updated,skipped,rejected,images_processed,errors,created_at,updated_at,request_id)
+     VALUES (?,?,'running',?,0,0,0,0,0,0,0,0,?,?,?)`
   )
-    .bind(runId, source, now, now, now)
-    .run();
+    .bind(runId, source, now, now, now, requestId ?? null)
+    .run()
+    .catch(async (error) => {
+      if (!requestId) throw error;
+      const existing = await env.DB.prepare(
+        'SELECT id, status, request_result FROM ingestion_runs WHERE request_id = ?'
+      )
+        .bind(requestId)
+        .first<{ id: string; status: string; request_result: string | null }>();
+      if (existing?.request_result) return JSON.parse(existing.request_result);
+      if (existing?.status === 'running') {
+        throw Object.assign(new Error('Discovery request is still processing.'), {
+          runId: existing.id,
+          queueMessagesSent: false
+        });
+      }
+      throw error;
+    });
+  if (inserted && typeof inserted === 'object' && 'runId' in inserted) return inserted;
 
   try {
     const state = await env.DB.prepare(
@@ -185,8 +223,9 @@ export async function discoverAndQueue(
         rejected
       })
     );
-    return {
+    const result = {
       runId,
+      requestId,
       source,
       discovered,
       scanned,
@@ -198,6 +237,10 @@ export async function discoverAndQueue(
         ...(exhausted ? { cursor: undefined } : {})
       }
     };
+    await env.DB.prepare('UPDATE ingestion_runs SET request_result = ? WHERE id = ?')
+      .bind(JSON.stringify(result), runId)
+      .run();
+    return result;
   } catch (error) {
     if (!queueMessagesSent) {
       await Promise.all(
