@@ -25,7 +25,26 @@
   });
 </script>
 
-<Header user={data.user} />
-{@render children()}
-<Footer />
-<MobileNavigation />
+<div class="desktop-shell">
+  <Header user={data.user} authEnabled={data.authEnabled} />
+  <div class="page-content">
+    {@render children()}
+    <Footer />
+  </div>
+  <MobileNavigation />
+</div>
+
+<style>
+  .page-content {
+    min-height: 100vh;
+    margin-left: 5.25rem;
+    padding-top: 4.65rem;
+  }
+
+  @media (max-width: 700px) {
+    .page-content {
+      margin-left: 0;
+      padding-top: 4.15rem;
+    }
+  }
+</style>

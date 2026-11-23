@@ -7,7 +7,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "dev:worker": "pnpm build && wrangler dev --config wrangler.jsonc",
+    "dev:worker": "pnpm build && wrangler dev --config wrangler.jsonc --var PUBLIC_MUSEUM_CONSTRUCTION_NOTICE:false --var PUBLIC_AUTH_ENABLED:true",
     "deploy": "pnpm build && wrangler deploy",
     "cf-typegen": "wrangler types",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

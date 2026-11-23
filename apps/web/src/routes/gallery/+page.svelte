@@ -177,7 +177,7 @@
     font-size: 0.75rem;
   }
   .empty {
-    padding: 7rem 1rem;
+    padding: 3.5rem 1rem;
     text-align: center;
   }
   .empty h2 {

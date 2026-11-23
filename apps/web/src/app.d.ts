@@ -16,6 +16,8 @@ declare global {
       INGESTION_AUTOPUBLISH_SECRET?: string;
       SMITHSONIAN_API_KEY?: string;
       ASSET_BASE_URL?: string;
+      PUBLIC_MUSEUM_CONSTRUCTION_NOTICE?: string;
+      PUBLIC_AUTH_ENABLED?: string;
       BETTER_AUTH_SECRET: string;
       BETTER_AUTH_URL: string;
       ZEPTO_MAIL_API_KEY: string;
