@@ -5,7 +5,15 @@
   "compatibility_date": "2026-11-05",
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
+  "vars": {
+    "PUBLIC_MUSEUM_CONSTRUCTION_NOTICE": "true",
+    "PUBLIC_AUTH_ENABLED": "false"
+  },
   "previews": {
+    "vars": {
+      "PUBLIC_MUSEUM_CONSTRUCTION_NOTICE": "false",
+      "PUBLIC_AUTH_ENABLED": "true"
+    },
     "d1_databases": [
       {
         "binding": "DB",

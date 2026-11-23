@@ -1,14 +1,16 @@
 <footer>
   <div class="page-shell footer-main">
-    <div class="identity">
-      <a class="wordmark editorial-title" href="/">Culturio</a>
-      <p>An open archive for discovering African cultural heritage through its artifacts.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="/gallery">Explore the archive</a>
-      <a href="/search">Search</a>
-      <a href="/museum">Virtual museum</a>
-      <a href="/about">About Culturio</a>
+    <div class="footer-left">
+      <div class="identity">
+        <a class="wordmark editorial-title" href="/">Culturio</a>
+        <p>An open archive for discovering African cultural heritage through its artifacts.</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="/gallery">Gallery</a>
+        <a href="/search">Search</a>
+        <a href="/museum">Museum</a>
+        <a href="/about">About</a>
+      </nav>
       <a
         class="github-link"
         href="https://github.com/a1s0sa/culturio"
@@ -19,29 +21,53 @@
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path
-            fill="currentColor"
-            d="M12 .9a11.1 11.1 0 0 0-3.51 21.63c.56.1.76-.24.76-.54v-2.08c-3.1.67-3.76-1.32-3.76-1.32-.5-1.28-1.24-1.62-1.24-1.62-1.01-.69.08-.68.08-.68 1.12.08 1.71 1.15 1.71 1.15 1 1.7 2.61 1.21 3.25.93.1-.72.39-1.21.71-1.49-2.48-.28-5.08-1.24-5.08-5.52 0-1.22.44-2.21 1.15-2.99-.12-.28-.5-1.42.11-2.95 0 0 .94-.3 3.05 1.14a10.6 10.6 0 0 1 5.55 0c2.11-1.44 3.05-1.14 3.05-1.14.61 1.53.23 2.67.11 2.95.72.78 1.15 1.77 1.15 2.99 0 4.29-2.6 5.23-5.09 5.51.4.35.76 1.03.76 2.08v3.09c0 .3.2.65.77.54A11.1 11.1 0 0 0 12 .9Z"
+            d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
           />
         </svg>
       </a>
-    </nav>
+      <p class="artifact-note">Artifact records retain their source and attribution.</p>
+    </div>
+
+    <div class="footer-right">
+      <p class="footer-credit">
+        <span>curated by</span>
+        <a
+          class="aibergo-link"
+          href="https://x.com/aibergolabs"
+          aria-label="Aibergo Labs on X"
+          title="Aibergo Labs on X"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img class="logo-dark" src="/AIBERGO_LABS_DARK_BLUE.png" alt="" />
+          <img class="logo-light" src="/AIBERGO_LABS_LIGHT_BLUE.png" alt="" />
+        </a>
+      </p>
+    </div>
   </div>
-  <div class="page-shell footer-meta">
-    <span>© {new Date().getFullYear()} Culturio</span>
-    <span>Artifact records retain their source and attribution.</span>
+
+  <div class="footer-art" aria-hidden="true">
+    <img src="/CULTURIO-OPEN%20GRAPH%202.jpg" alt="" />
   </div>
 </footer>
 
 <style>
   footer {
-    border-top: 1px solid var(--color-line);
-    background: var(--color-paper);
+    overflow: hidden;
+    background: var(--color-ivory);
   }
   .footer-main {
     display: flex;
     justify-content: space-between;
     gap: 3rem;
-    padding-block: 3rem;
+    width: 75%;
+    padding-block: 2.5rem 2rem;
+    color: var(--color-ink);
+  }
+  .footer-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
   }
   .identity {
     max-width: 24rem;
@@ -51,61 +77,134 @@
   }
   .identity p {
     margin: 0.5rem 0 0;
-    color: var(--color-muted);
     font-size: 0.9rem;
     line-height: 1.6;
   }
   nav {
     display: flex;
-    flex-wrap: wrap;
-    align-content: start;
-    justify-content: flex-end;
-    gap: 0.7rem 1.4rem;
-    padding-top: 0.65rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.7rem;
+    margin-top: 1.7rem;
   }
-  nav a,
-  .footer-meta {
-    font-size: 0.8rem;
+  nav a {
+    font-size: 0.88rem;
   }
   nav a:hover {
     color: var(--color-bronze);
   }
-  nav .github-link {
-    display: grid;
-    width: 2rem;
-    height: 2rem;
-    place-items: center;
-    padding: 0;
-    border: 1px solid var(--color-line);
-    border-radius: 50%;
+  .github-link {
+    display: inline-flex;
+    margin-top: 1.1rem;
+    color: #b8aa96;
+    transition: color 160ms ease;
+  }
+  .github-link:hover {
+    color: var(--color-bronze);
   }
   .github-link svg {
-    width: 1.1rem;
-    height: 1.1rem;
+    width: 1.3rem;
+    height: 1.3rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
   }
-  nav .github-link:hover {
-    border-color: var(--color-bronze);
-    background: #e9e2d8;
+  .artifact-note {
+    margin: 1.6rem 0 0;
+    font-size: 0.76rem;
   }
-  .footer-meta {
+  .footer-right {
     display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    padding-block: 1rem;
-    border-top: 1px solid var(--color-line);
-    color: var(--color-muted);
+    flex-direction: row;
+    align-items: center;
+    align-self: flex-end;
+    gap: 0.75rem;
+    padding-top: 0.3rem;
+    color: var(--color-ink);
+  }
+  .footer-right p {
+    margin: 0;
+    font-size: 0.85rem;
+  }
+  .footer-credit {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .aibergo-link {
+    position: relative;
+    display: inline-block;
+    flex: none;
+    width: 6.45rem;
+    height: 2rem;
+  }
+  .aibergo-link img {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: opacity 160ms ease;
+  }
+  .aibergo-link .logo-dark {
+    opacity: 1;
+  }
+  .aibergo-link .logo-light {
+    opacity: 0;
+  }
+  .aibergo-link:hover .logo-dark,
+  .aibergo-link:focus-visible .logo-dark {
+    opacity: 0;
+  }
+  .aibergo-link:hover .logo-light,
+  .aibergo-link:focus-visible .logo-light {
+    opacity: 1;
+  }
+  .footer-art {
+    position: relative;
+    height: clamp(25rem, 30vw, 38rem);
+    overflow: hidden;
+    background: var(--color-ivory);
+  }
+  .footer-art img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    transform: scale(1.16);
+    -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .aibergo-link img {
+      transition: none;
+    }
   }
   @media (max-width: 600px) {
-    .footer-main,
-    .footer-meta {
-      flex-direction: column;
-    }
     .footer-main {
-      gap: 1.5rem;
+      flex-direction: column;
+      gap: 2.5rem;
+      width: calc(100% - 2rem);
+      padding-block: 3rem 2rem;
     }
-    nav {
-      justify-content: flex-start;
-      gap: 0.85rem 1rem;
+    .footer-right {
+      align-self: flex-start;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .footer-art {
+      margin-top: 1.5rem;
+      height: 55vw;
+      min-height: 10rem;
+      max-height: 22rem;
+    }
+    .footer-art img {
+      transform: scale(1.02) translateY(20%);
     }
   }
 </style>
