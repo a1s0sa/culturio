@@ -13,7 +13,7 @@
       </nav>
       <a
         class="github-link"
-        href="https://github.com/a1s0sa/culturio"
+        href="https://github.com/aibergo-labs/culturio"
         aria-label="Culturio on GitHub"
         title="Culturio on GitHub"
         target="_blank"
