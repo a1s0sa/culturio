@@ -34,6 +34,5 @@ worker-configuration.d.ts
 Thumbs.db
 
 # Local agent configuration
-.agents/
 .aws/
 .codex/
