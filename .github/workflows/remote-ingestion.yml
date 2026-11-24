@@ -1,7 +1,9 @@
 name: Remote ingestion
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: "0 1,13 * * *" # 01:00 and 13:00 UTC
+  workflow_dispatch: # manually
     inputs:
       source:
         description: Museum collection to ingest
