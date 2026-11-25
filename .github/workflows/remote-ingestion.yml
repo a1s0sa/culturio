@@ -30,6 +30,7 @@ jobs:
     # For an organization-owned repository, set INGESTION_OWNER_LOGINS to a
     # comma-separated allowlist of organization owner usernames in repository variables.
     if: >-
+      github.event_name == 'schedule' ||
       github.actor == github.repository_owner ||
       contains(format(',{0},', vars.INGESTION_OWNER_LOGINS), format(',{0},', github.actor))
     runs-on: ubuntu-latest
